@@ -1,0 +1,38 @@
+<html>
+<head>
+</head>
+<body>
+<script type="text/javascript">
+
+var ws;
+var rqid = 0;
+var rqidWait = {}
+
+function sendMsg(jsonMsg) {
+	jsonMsg["rqid"] = rqid;
+	rqidWait[rqid] = true;
+	rqid++;
+	console.log(jsonMsg)
+	ws.send(JSON.stringify(jsonMsg));
+}
+
+function start() {
+	if (!window.WebSocket) {
+		alert("Do not have websockets");
+		return;
+	}
+	ws = new WebSocket("ws://localhost:9000/rq");
+	ws.onopen = function (ev) {
+		console.log("WS Ready");
+		sendMsg({"cmd":"playlist","rqid":0});
+	};
+	ws.onmessage = function (ev) {
+		console.log(ev.data);
+	};
+}
+
+start();
+
+</script>
+</body>
+</html>
