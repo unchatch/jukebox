@@ -167,8 +167,9 @@ class JukeboxWebWorker(WebSocket):
     def msg_fail(self, rqid=None):
         self.send(json.dumps({'status':False,'rqid':rqid}))
     
-    def msg_success(self, rqid=None):
-        self.send(json.dumps({'status':True,'rqid':rqid}))
+    def msg_success(self, rqid, data={}):
+        data.update({'status':True,'rqid':rqid})
+        self.send(json.dumps(data))
     
     def received_message(self, message):
         if message.is_binary:
@@ -189,8 +190,8 @@ class JukeboxWebWorker(WebSocket):
         if cmd == "add" and "uri" in msg:
             self.add_uri(msg)
         elif cmd == "playlist":
-            self.send(json.dumps(self.get_pl()))
-            self.msg_success(msg["rqid"])
+            pl = self.get_pl()
+            self.msg_success(msg["rqid"], self.get_pl())
         elif cmd == "move_up" and "id" in msg:
             self.move_up(msg)
         elif cmd == "play" and "id" in msg:
@@ -285,7 +286,6 @@ class JukeboxWebWorker(WebSocket):
         conn.close()
 
         msg = {
-            'type': 'playlist',
-            'payload': pl
+            'playlist': pl
         }
         return msg
