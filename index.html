@@ -29,6 +29,9 @@ $(document).ready(function() {
 
 		ws.onmessage = function(ev) {
 			resp = JSON.parse(ev.data);
+			if (resp["playlist"] !== undefined) {
+				return;
+			}
 			if (wait[resp["rqid"]] === undefined) {
 				console.log("BAD MESSAGE:", resp);
 				console.log(resp);
