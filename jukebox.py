@@ -5,6 +5,7 @@ import sqlite3 as sqlite
 import threading
 import cherrypy
 import mpv
+import collections
 from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool, WebSocket
 from youtube_dl import YoutubeDL
 
@@ -54,9 +55,6 @@ class Jukebox:
         self.currently_playing = None
 
     def mpv_end_file(self):
-        print(">>>>>> EVENT")
-        print(">>>>>> " + repr(self.mpv_user_change))
-
         if not self.mpv_user_change:
             # get next plid
             conn = sqlite.connect(self.db_name)
@@ -182,6 +180,10 @@ class JukeboxWebWorker(WebSocket):
             self.msg_fail()
             return
 
+        if not isinstance(msg, collections.Iterable)
+            self.msg_fail()
+            return
+
         if 'cmd' not in msg or 'rqid' not in msg:
             self.msg_fail()
             return
@@ -191,7 +193,7 @@ class JukeboxWebWorker(WebSocket):
             self.add_uri(msg)
         elif cmd == "playlist":
             pl = self.get_pl()
-            self.msg_success(msg["rqid"], self.get_pl())
+            self.msg_success(msg["rqid"], pl)
         elif cmd == "move_up" and "id" in msg:
             self.move_up(msg)
         elif cmd == "play" and "id" in msg:
@@ -204,6 +206,10 @@ class JukeboxWebWorker(WebSocket):
                 self.msg_success(msg["rqid"])
             else:
                 self.msg_fail(msg["rqid"])
+        elif cmd == "volup":
+            pass
+        elif cmd == "voldn":
+            pass
         else:
             self.msg_fail(msg["rqid"])
 
@@ -215,6 +221,10 @@ class JukeboxWebWorker(WebSocket):
         if info is None:
             self.msg_fail(rqid)
             return
+
+        # deal with playlists
+        if 'entries' in info:
+            pass
 
         try:
             # exclusive db connection
