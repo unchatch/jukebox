@@ -162,14 +162,16 @@ class JukeboxWebWorker(WebSocket):
         #self.ydl = YoutubeDL({'restrictfilenames': True})
         #self.ydl.add_default_info_extractors()
 
-    def msg_fail(self, rqid=None):
-        self.send(json.dumps({'status':False,'rqid':rqid}))
+    def msg_fail(self):
+        self.send(json.dumps({'status':False,'rqid':self.rqid}))
     
-    def msg_success(self, rqid, data={}):
-        data.update({'status':True,'rqid':rqid})
+    def msg_success(self, data={}):
+        data.update({'status':True,'rqid':self.rqid})
         self.send(json.dumps(data))
     
     def received_message(self, message):
+        self.rqid = None
+
         if message.is_binary:
             self.msg_fail()
             return
@@ -180,7 +182,7 @@ class JukeboxWebWorker(WebSocket):
             self.msg_fail()
             return
 
-        if not isinstance(msg, collections.Iterable)
+        if not isinstance(msg, collections.Iterable):
             self.msg_fail()
             return
 
@@ -188,38 +190,41 @@ class JukeboxWebWorker(WebSocket):
             self.msg_fail()
             return
 
+        self.rqid = msg["rqid"]
+
         cmd = msg["cmd"]
         if cmd == "add" and "uri" in msg:
             self.add_uri(msg)
         elif cmd == "playlist":
             pl = self.get_pl()
-            self.msg_success(msg["rqid"], pl)
+            self.msg_success(pl)
         elif cmd == "move_up" and "id" in msg:
             self.move_up(msg)
         elif cmd == "play" and "id" in msg:
             if self.jukebox_actions["play"](msg["id"]):
-                self.msg_success(msg["rqid"])
+                self.msg_success()
             else:
-                self.msg_fail(msg["rqid"])
+                self.msg_fail()
         elif cmd == "playpause":
             if self.jukebox_actions["playpause"]():
-                self.msg_success(msg["rqid"])
+                self.msg_success()
             else:
-                self.msg_fail(msg["rqid"])
+                self.msg_fail()
         elif cmd == "volup":
-            pass
+            self.mpv.volume = max(5.0 + self.mpv.volume, self.mpv.volume)
+            self.msg_success()
         elif cmd == "voldn":
-            pass
+            self.mpv.volume = min(self.mpv.volume - 5.0, self.mpv.volume)
+            self.msg_success()
         else:
-            self.msg_fail(msg["rqid"])
+            self.msg_fail()
 
     def add_uri(self,msg):
         uri = msg["uri"]
-        rqid = msg["rqid"]
 
         info = get_youtube_info(uri)
         if info is None:
-            self.msg_fail(rqid)
+            self.msg_fail()
             return
 
         # deal with playlists
@@ -243,15 +248,14 @@ class JukeboxWebWorker(WebSocket):
             conn.commit()
             conn.close()
         except:
-            self.msg_fail(rqid)
+            self.msg_fail()
         else:
             pl = self.get_pl()
             cherrypy.engine.publish('websocket-broadcast', json.dumps(pl))
-            self.msg_success(rqid)
+            self.msg_success()
 
     def move_up(self, msg):
         plid = msg["id"]
-        rqid = msg["rqid"]
         try:
             conn = sqlite.connect(self.pl_db, isolation_level="EXCLUSIVE")
             
@@ -274,11 +278,11 @@ class JukeboxWebWorker(WebSocket):
                 conn.commit()
             conn.close()
         except:
-            self.msg_fail(rqid)
+            self.msg_fail()
         else:
             pl = self.get_pl()
             cherrypy.engine.publish('websocket-broadcast', json.dumps(pl))
-            self.msg_success(rqid)
+            self.msg_success()
 
     def get_pl(self):
         conn = sqlite.connect(self.pl_db)
