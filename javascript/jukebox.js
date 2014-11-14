@@ -1,3 +1,22 @@
+function playPause(success, fail) {
+	sendMsg({'cmd':'playpause'}, success, fail);
+}
+
+function addVideo(youtubeURL, success, fail) {
+	sendMsg({'cmd':'play', 'uri': youtubeURL}, success, fail);
+}
+
+function volUp() {
+	sendMsg({'cmd':'volup'});
+}
+
+function volDown() {
+	sendMsg({'cmd':'voldn'});
+}
+
+
+//////
+
 var sendMsg;
 
 function guiUpdatePlaylist(resp) {
