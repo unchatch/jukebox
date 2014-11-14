@@ -15,15 +15,27 @@
 		<title>HatCH Jukebox</title>
 	</head>
 	<body>
-		<pre>
-		Format: sendMsg({'cmd':'COMMANDS' [,ARGS]})
-		-------------------------------------------
-		Substitute COMMANDS for one of the following commands:
-		  - playpause (no parameters)
-		  - play (parameter: 'uri':'YOUTUBE_URL')
-		  - volup (no parameters)
-		  - voldn (no parameters)
-		  - playlist (no parameters)
-		</pre>
+		<div class="vertical-container">
+			<div class="player">
+				<h1>HatCH Jukebox</h1>
+				<button>Playpause</button>
+				<button>Select video</button>
+				<button>^</button>
+				<button>v</button>
+				<button>playlist</button>
+				<pre>
+Format: sendMsg({'cmd':'COMMANDS' [,ARGS]})
+-------------------------------------------
+Substitute COMMANDS for one of the following commands:
+  - playpause (no parameters)
+  - play (parameter: 'uri':'YOUTUBE_URL')
+  - volup (no parameters)
+  - voldn (no parameters)
+  - playlist (no parameters)
+				</pre>
+
+			</div>
+		</div>
+		
 	</body>
 </html>
