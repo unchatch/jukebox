@@ -1,22 +1,44 @@
-function playPause(success, fail) {
-	sendMsg({'cmd':'playpause'}, success, fail);
-	if ($("#playpause").html().equals("Play")) {
+function playPause() {
+	sendMsg({'cmd':'playpause'}, function() {
+
+	}, function () {
+		alert("Failed to play/pause");
+	});
+	if ($("#playpause").html() == "Play") {
 		$("#playpause").html("Pause");
 	} else {
 		$("#playpause").html("Play");
 	}
 }
 
-function addVideo(youtubeURL, success, fail) {
-	sendMsg({'cmd':'play', 'uri': youtubeURL}, success, fail);
+function submitVideo() {
+	alert(document.forms["addVideo"]["videoUrl"].value);
+	return false;
+
+}
+
+function addVideo(youtubeURL) {
+	sendMsg({'cmd':'play', 'uri': youtubeURL}, function(e) {
+
+	}, function(e) {
+		alert("Failed to add video");
+	});
 }
 
 function volUp() {
-	sendMsg({'cmd':'volup'});
+	sendMsg({'cmd':'volup'}, function(e) {
+
+	}, function(e) {
+		alert("Failed to increase volume");
+	});
 }
 
 function volDown() {
-	sendMsg({'cmd':'voldn'});
+	sendMsg({'cmd':'voldn'}, function(e) {
+
+	}, function(e) {
+		alert("Failed to decrease volume");
+	});
 }
 
 
