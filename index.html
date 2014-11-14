@@ -1,83 +1,29 @@
-<html>
-<head>
-<script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
-<script type="text/javascript">
-
-var sendMsg;
-
-function guiUpdatePlaylist(resp) {
-	var playlist = resp["playlist"];
-	console.log(playlist);
-}
-
-function generalFail(req) {
-	console.log("GENERAL FAIL ON REQUEST:", req);
-}
-
-$(document).ready(function() {
-	if (!window.WebSocket) {
-		alert("Do not have websockets! Boo you >:-(");
-		return;
-	}
-
-	var ws = new WebSocket("ws://localhost:9000/rq");
-
-	sendMsg = (function(ws) {
-		var ws = ws;
-		var rqid = 0;
-		var wait = {};
-
-		ws.onmessage = function(ev) {
-			resp = JSON.parse(ev.data);
-			if (resp["playlist"] !== undefined) {
-				guiUpdatePlaylist(resp);
-				return;
-			}
-			if (wait[resp["rqid"]] === undefined) {
-				console.log("BAD MESSAGE:", resp);
-				console.log(resp);
-			}
-			else {
-				if (resp["status"] == false) {
-					wait[resp["rqid"]]["failure"](wait[resp["rqid"]]["request"]);
-				}
-				else {
-					wait[resp["rqid"]]["success"](resp);
-				}
-			}
-		};
-
-		return function(jsonMsg, success_call, fail_call) {
-			jsonMsg["rqid"] = rqid;
-			wait[rqid] = {
-				"request": jsonMsg,
-				"success": success_call,
-				"failure": fail_call
-			};
-			rqid++;
-			ws.send(JSON.stringify(jsonMsg));
-		};
-	})(ws);
-
-
-	ws.onopen = function(ev) {
-		console.log("WS Ready");
-		sendMsg({"cmd":"playlist"});
-	};
-});
-
-</script>
-</head>
-<body>
-<pre>
-Format: sendMsg({'cmd':'COMMANDS' [,ARGS]})
--------------------------------------------
-Substitute COMMANDS for one of the following commands:
-  - playpause (no parameters)
-  - play (parameter: 'uri':'YOUTUBE_URL')
-  - volup (no parameters)
-  - voldn (no parameters)
-  - playlist (no parameters)
-</pre>
-</body>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:fb="http://ogp.me/ns/fb#">
+	<head>
+		<meta charset='utf-8'>
+		<meta http-equiv="X-UA-Compatible" content="chrome=1">
+		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"/>
+		<meta name="description" content="HatCH Jukebox">
+		<link rel="icon" href="./favicon.ico" type="image/x-icon"/>
+		<link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen" />
+		<link href='http://fonts.googleapis.com/css?family=Source+Sans+Pro:400,200,700' rel='stylesheet' type='text/css'>
+				
+		<script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+		<script src="./javascript/jukebox.js"></script>
+		<title>HatCH Jukebox</title>
+	</head>
+	<body>
+		<pre>
+		Format: sendMsg({'cmd':'COMMANDS' [,ARGS]})
+		-------------------------------------------
+		Substitute COMMANDS for one of the following commands:
+		  - playpause (no parameters)
+		  - play (parameter: 'uri':'YOUTUBE_URL')
+		  - volup (no parameters)
+		  - voldn (no parameters)
+		  - playlist (no parameters)
+		</pre>
+	</body>
 </html>
