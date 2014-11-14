@@ -105,7 +105,10 @@ class Jukebox:
         self.mpv.quit()
 
     def play(self, plid):
-        return self._play(plid, user=True)
+        ret = self._play(plid, user=True)
+        if self.mpv.pause.val:
+            self.mpv.pause = False
+        return ret
 
     def _play(self, plid, user=False):
         with self.lock:
@@ -194,12 +197,12 @@ class JukeboxWebWorker(WebSocket):
 
         cmd = msg["cmd"]
         if cmd == "add" and "uri" in msg:
-            self.add_uri(msg)
+            self.add_uri(msg["uri"])
         elif cmd == "playlist":
             pl = self.get_pl()
             self.msg_success(pl)
         elif cmd == "move_up" and "id" in msg:
-            self.move_up(msg)
+            self.move_up(msg["id"])
         elif cmd == "play" and "id" in msg:
             if self.jukebox_actions["play"](msg["id"]):
                 self.msg_success()
@@ -219,9 +222,7 @@ class JukeboxWebWorker(WebSocket):
         else:
             self.msg_fail()
 
-    def add_uri(self,msg):
-        uri = msg["uri"]
-
+    def add_uri(self,uri):
         info = get_youtube_info(uri)
         if info is None:
             self.msg_fail()
@@ -254,8 +255,7 @@ class JukeboxWebWorker(WebSocket):
             cherrypy.engine.publish('websocket-broadcast', json.dumps(pl))
             self.msg_success()
 
-    def move_up(self, msg):
-        plid = msg["id"]
+    def move_up(self, plid):
         try:
             conn = sqlite.connect(self.pl_db, isolation_level="EXCLUSIVE")
             
