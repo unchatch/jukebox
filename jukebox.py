@@ -132,6 +132,12 @@ class Jukebox:
             self.mpv.pause = True
         return True
 
+    def volup(self):
+        self.mpv.volume = max(5.0 + self.mpv.volume, self.mpv.volume)
+
+    def voldn(self):
+        self.mpv.volume = min(self.mpv.volume - 5.0, self.mpv.volume)
+
     def get_uri_from_id(self, plid):
         conn = sqlite.connect(self.db_name)
         cursor = conn.execute(
@@ -214,10 +220,10 @@ class JukeboxWebWorker(WebSocket):
             else:
                 self.msg_fail()
         elif cmd == "volup":
-            self.mpv.volume = max(5.0 + self.mpv.volume, self.mpv.volume)
+            self.jukebox_actions["volup"]()
             self.msg_success()
         elif cmd == "voldn":
-            self.mpv.volume = min(self.mpv.volume - 5.0, self.mpv.volume)
+            self.jukebox_actions["voldn"]()
             self.msg_success()
         else:
             self.msg_fail()

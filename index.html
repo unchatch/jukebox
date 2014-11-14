@@ -30,6 +30,7 @@ $(document).ready(function() {
 		ws.onmessage = function(ev) {
 			resp = JSON.parse(ev.data);
 			if (resp["playlist"] !== undefined) {
+				guiUpdatePlaylist(resp);
 				return;
 			}
 			if (wait[resp["rqid"]] === undefined) {
@@ -61,7 +62,7 @@ $(document).ready(function() {
 
 	ws.onopen = function(ev) {
 		console.log("WS Ready");
-		sendMsg({"cmd":"playlist"}, guiUpdatePlaylist, generalFail);
+		sendMsg({"cmd":"playlist"});
 	};
 });
 
