@@ -135,10 +135,10 @@ class Jukebox:
         return True
 
     def volup(self):
-        self.mpv.volume = max(5.0 + self.mpv.volume, self.mpv.volume)
+        self.mpv.volume = min(5.0 + self.mpv.volume, self.mpv.volume)
 
     def voldn(self):
-        self.mpv.volume = min(self.mpv.volume - 5.0, self.mpv.volume)
+        self.mpv.volume = max(self.mpv.volume - 5.0, self.mpv.volume)
 
     def get_uri_from_id(self, plid):
         conn = sqlite.connect(self.db_name)
@@ -238,7 +238,7 @@ class JukeboxWebWorker(WebSocket):
 
         # deal with playlists
         if 'entries' in info:
-            pass
+            return
 
         try:
             # exclusive db connection
