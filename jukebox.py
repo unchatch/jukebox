@@ -83,7 +83,9 @@ class Jukebox:
         # set web worker actions
         JukeboxWebWorker.jukebox_actions = {
             "play": self.play,
-            "playpause": self.playpause
+            "playpause": self.playpause,
+            "volup": self.volup,
+            "voldn": self.voldn
         }
         config = {
             '/rq': {
