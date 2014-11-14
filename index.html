@@ -18,22 +18,19 @@
 		<div class="vertical-container">
 			<div class="player">
 				<h1>HatCH Jukebox</h1>
-				<button>Playpause</button>
-				<button>Select video</button>
-				<button>^</button>
-				<button>v</button>
-				<button>playlist</button>
-				<pre>
-Format: sendMsg({'cmd':'COMMANDS' [,ARGS]})
--------------------------------------------
-Substitute COMMANDS for one of the following commands:
-  - playpause (no parameters)
-  - play (parameter: 'uri':'YOUTUBE_URL')
-  - volup (no parameters)
-  - voldn (no parameters)
-  - playlist (no parameters)
-				</pre>
-
+				<table>
+					<tbody>
+						<tr><td></td><td><button onclick="volUp()">^</button></td><td></td></tr>
+						<tr><td><button onclick="rewind()">&lt;&lt;</button></td><td><button id="playpause" onclick="playPause()">Play</button></td><td><button onclick="fastforward()">&gt;&gt;</button></td></tr>
+						</tr>
+						<tr><td></td><td><button onclick="volDown()">v</button></td><td></td></tr>
+					</tbody>
+				</table>
+				<form>
+					Video URL:<br>
+					<input type="text" name="url"><br>
+					<input type="submit">
+				</form>
 			</div>
 		</div>
 		

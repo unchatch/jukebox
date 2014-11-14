@@ -1,4 +1,5 @@
 body {
+	font-family: 'Source Sans Pro', sans-serif;
 	background-color: rgba(0,0,0,0.5);
 	height: 100vh;
 }
@@ -17,4 +18,9 @@ body {
 	background-color: black;	
 	color: white;
 	padding: 3px;
+	text-align: center;
+}
+
+.player > table {
+	display: inline-block;
 }

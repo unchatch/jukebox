@@ -1,5 +1,10 @@
 function playPause(success, fail) {
 	sendMsg({'cmd':'playpause'}, success, fail);
+	if ($("#playpause").html().equals("Play")) {
+		$("#playpause").html("Pause");
+	} else {
+		$("#playpause").html("Play");
+	}
 }
 
 function addVideo(youtubeURL, success, fail) {
