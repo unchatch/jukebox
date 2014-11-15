@@ -1,0 +1,26 @@
+body {
+	font-family: 'Source Sans Pro', sans-serif;
+	background-color: rgba(0,0,0,0.5);
+	height: 100vh;
+}
+
+.vertical-container {
+	display: -webkit-flex;
+	display: -ms-flex;
+	display: -moz-flex;
+	display: flex;
+	height: 100%;
+
+}
+
+.player {
+	margin: auto;
+	background-color: black;	
+	color: white;
+	padding: 3px;
+	text-align: center;
+}
+
+.player > table {
+	display: inline-block;
+}
