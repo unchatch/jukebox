@@ -5,7 +5,6 @@ import sqlite3 as sqlite
 import threading
 import cherrypy
 import mpv
-import collections
 from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool, WebSocket
 from youtube_dl import YoutubeDL
 
@@ -193,7 +192,8 @@ class JukeboxWebWorker(WebSocket):
             self.msg_fail()
             return
 
-        if not isinstance(msg, collections.Iterable):
+        # make sure the given type is a mapping, i.e. dict
+        if not isinstance(msg, dict):
             self.msg_fail()
             return
 
