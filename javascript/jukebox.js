@@ -11,14 +11,14 @@ function playPause() {
 	}
 }
 
-function submitVideo() {
-	alert(document.forms["addVideo"]["videoUrl"].value);
-	return false;
-
+function play(id) {
+	sendMsg({'cmd':'play', 'id':id}, function() {}, function(e) {
+		alert("Failed to play video");
+	});
 }
 
 function addVideo(youtubeURL) {
-	sendMsg({'cmd':'play', 'uri': youtubeURL}, function(e) {
+	sendMsg({'cmd':'add', 'uri': youtubeURL}, function(e) {
 
 	}, function(e) {
 		alert("Failed to add video");
@@ -48,7 +48,7 @@ var sendMsg;
 
 function guiUpdatePlaylist(resp) {
 	var playlist = resp["playlist"];
-	console.log(playlist);
+	console.log("PLAYLIST: ", playlist);
 }
 
 function generalFail(req) {
@@ -70,10 +70,20 @@ $(document).ready(function() {
 
 		ws.onmessage = function(ev) {
 			resp = JSON.parse(ev.data);
-			if (resp["playlist"] !== undefined) {
-				guiUpdatePlaylist(resp);
+			if (resp["broadcast"] === true) {
+				switch(resp["type"]) {
+					case "playlist":
+						guiUpdatePlaylist(resp["playlist"]);
+						break;
+					case "volume":
+						console.log("VOLUME: ", resp);
+						break;
+					default:
+						console.log("BAD BROADCAST: ", resp);
+				}
 				return;
 			}
+
 			if (wait[resp["rqid"]] === undefined) {
 				console.log("BAD MESSAGE:", resp);
 				console.log(resp);
@@ -103,6 +113,6 @@ $(document).ready(function() {
 
 	ws.onopen = function(ev) {
 		console.log("WS Ready");
-		sendMsg({"cmd":"playlist"});
+		sendMsg({"cmd":"playlist"}, function(e){console.log(e);}, function(e){console.log(e);});
 	};
 });

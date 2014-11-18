@@ -52,6 +52,7 @@ class Jukebox:
         self.mpv_user_change = False
         self.mpv_shutdown = False
         self.currently_playing = None
+        self.mpv_vol = 100.0
 
     def mpv_end_file(self):
         if not self.mpv_user_change:
@@ -84,7 +85,8 @@ class Jukebox:
             "play": self.play,
             "playpause": self.playpause,
             "volup": self.volup,
-            "voldn": self.voldn
+            "voldn": self.voldn,
+            "getvol": self.getvol
         }
         config = {
             '/rq': {
@@ -124,6 +126,7 @@ class Jukebox:
             self.currently_playing = plid
 
         self.mpv.play(info["url"])
+        self.mpv.volume = self.mpv_vol
         return True
 
     def playpause(self):
@@ -134,10 +137,17 @@ class Jukebox:
         return True
 
     def volup(self):
-        self.mpv.volume = min(5.0 + self.mpv.volume, self.mpv.volume)
+        self.mpv_vol = min(self.mpv_vol + 5.0, 100.0)
+        if not self.mpv.eof_reached.val:
+            self.mpv.volume = self.mpv_vol
 
     def voldn(self):
-        self.mpv.volume = max(self.mpv.volume - 5.0, self.mpv.volume)
+        self.mpv_vol = max(0.0, self.mpv_vol - 5.0)
+        if not self.mpv.eof_reached.val:
+            self.mpv.volume = self.mpv_vol
+    
+    def getvol(self):
+        return self.mpv_vol
 
     def get_uri_from_id(self, plid):
         conn = sqlite.connect(self.db_name)
@@ -178,7 +188,11 @@ class JukeboxWebWorker(WebSocket):
     def msg_success(self, data={}):
         data.update({'status':True,'rqid':self.rqid})
         self.send(json.dumps(data))
-    
+
+    def msg_broadcast(self, jsonMsg, msgType):
+        jsonMsg.update({'broadcast':True, 'type': msgType})
+        cherrypy.engine.publish('websocket-broadcast', json.dumps(jsonMsg))
+        
     def received_message(self, message):
         self.rqid = None
 
@@ -223,9 +237,11 @@ class JukeboxWebWorker(WebSocket):
                 self.msg_fail()
         elif cmd == "volup":
             self.jukebox_actions["volup"]()
+            self.msg_broadcast({'value': self.jukebox_actions["getvol"]()}, "volume")
             self.msg_success()
         elif cmd == "voldn":
             self.jukebox_actions["voldn"]()
+            self.msg_broadcast({'value': self.jukebox_actions["getvol"]()}, "volume")
             self.msg_success()
         else:
             self.msg_fail()
@@ -259,8 +275,7 @@ class JukeboxWebWorker(WebSocket):
         except:
             self.msg_fail()
         else:
-            pl = self.get_pl()
-            cherrypy.engine.publish('websocket-broadcast', json.dumps(pl))
+            self.msg_broadcast(self.get_pl(), "playlist")
             self.msg_success()
 
     def move_up(self, plid):
