@@ -46,8 +46,7 @@ function volDown() {
 
 var sendMsg;
 
-function guiUpdatePlaylist(resp) {
-	var playlist = resp["playlist"];
+function guiUpdatePlaylist(playlist) {
 	console.log("PLAYLIST: ", playlist);
 }
 
