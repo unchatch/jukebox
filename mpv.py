@@ -486,7 +486,7 @@ class MPV:
 	
 def bindproperty(MPV, name, proptype, access):
 	def getter(self):
-		return proptype(_ensure_encoding(_mpv_get_property_string(self.handle, name.encode())))
+		return proptype(_ensure_encoding(_mpv_get_property_string(self.handle, name.encode())) or -1)
 	def setter(self, value):
 		_mpv_set_property_string(self.handle, name.encode(), str(proptype(value)).encode())
 	def barf(*args):
