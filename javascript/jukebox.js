@@ -1,9 +1,11 @@
 function playPause() {
 	sendMsg({'cmd':'playpause'}, function() {
-
 	}, function () {
 		alert("Failed to play/pause");
 	});
+}
+
+function guiTogglePlayPause() {
 	if ($("#playpause").html() == "Play") {
 		$("#playpause").html("Pause");
 	} else {
@@ -12,22 +14,29 @@ function playPause() {
 }
 
 function play(id) {
+	$("#" + id).text("loading");
+	$("#" + id).prop("disabled", true);
 	sendMsg({'cmd':'play', 'id':id}, function() {}, function(e) {
 		alert("Failed to play video");
+		$("#" + id).prop("disabled", false);
+	$("#" + id).text("play");
 	});
 }
 
 function addVideo(youtubeURL) {
+	$("#videoUrl").prop("disabled", true);
 	sendMsg({'cmd':'add', 'uri': youtubeURL}, function(e) {
-
+		$("#videoUrl").prop("disabled", false);
+		$("#videoUrl").val("");
 	}, function(e) {
 		alert("Failed to add video");
+		$("#videoUrl").prop("disabled", false);
+		$("#videoUrl").val("");
 	});
 }
 
 function volUp() {
 	sendMsg({'cmd':'volup'}, function(e) {
-
 	}, function(e) {
 		alert("Failed to increase volume");
 	});
@@ -35,7 +44,6 @@ function volUp() {
 
 function volDown() {
 	sendMsg({'cmd':'voldn'}, function(e) {
-
 	}, function(e) {
 		alert("Failed to decrease volume");
 	});
@@ -46,8 +54,45 @@ function volDown() {
 
 var sendMsg;
 
+function playlistPlay(ev) {
+	play(ev.toElement.id);
+}
+
 function guiUpdatePlaylist(playlist) {
-	console.log("PLAYLIST: ", playlist);
+	$("#playlist").empty();
+	var lis = [];
+	playlist.forEach(function(elm, idx, arr) {
+		var li = document.createElement("li");
+		li.className = "playlist_elm";
+
+		var button = document.createElement("button");
+		button.id = elm.id;
+		button.textContent = "play";
+		button.onclick = playlistPlay;
+		li.appendChild(button);
+
+		var link = document.createElement("a");
+		link.href = elm.uri;
+		// wheeee no sanitization here
+		link.textContent = elm.title;
+		link.target = "_blank";
+		li.appendChild(link);
+
+		lis.push(li);
+	});
+
+	$("#playlist").append(lis);
+}
+
+function guiUpdateVolume(vol) {
+	$("#volume").text(vol + " %");
+}
+
+function guiUpdateCurrentlyPlaying(current) {
+	if (current["current"] == null) return;
+	var id = "#" + current["current"];
+	$(id).text("playing");
+	$(id).prop("disabled", true);
 }
 
 function generalFail(req) {
@@ -75,7 +120,13 @@ $(document).ready(function() {
 						guiUpdatePlaylist(resp["playlist"]);
 						break;
 					case "volume":
-						console.log("VOLUME: ", resp);
+						guiUpdateVolume(resp["value"]);
+						break;
+					case "playpause":
+						guiTogglePlayPause();
+						break;
+					case "current":
+						guiUpdateCurrentlyPlaying(resp);
 						break;
 					default:
 						console.log("BAD BROADCAST: ", resp);
@@ -112,6 +163,15 @@ $(document).ready(function() {
 
 	ws.onopen = function(ev) {
 		console.log("WS Ready");
-		sendMsg({"cmd":"playlist"}, function(e){console.log(e);}, function(e){console.log(e);});
+		sendMsg({"cmd":"playlist"}, function(e){guiUpdatePlaylist(e["playlist"]);}, function(e){});
+		sendMsg({"cmd":"volume"}, function(e){guiUpdateVolume(e["volume"]);}, function(e){});
+		sendMsg({"cmd":"current"}, function(e){guiUpdateCurrentlyPlaying(e);}, function(e){});
+		sendMsg({"cmd":"ispaused"}, function(e){
+			$("#playpause").html(e.ispaused ? "Play" : "Pause");
+		},function(e){});
 	};
+
+	$("#addVideo").on("click", function() {
+		addVideo($("#videoUrl").val());
+	});
 });

@@ -5,6 +5,7 @@ import sqlite3 as sqlite
 import threading
 import cherrypy
 import mpv
+import time
 from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool, WebSocket
 from youtube_dl import YoutubeDL
 
@@ -78,6 +79,9 @@ class Jukebox:
         # start mpv listeners
         self.mpv.register_event_callback(mpv.MpvEventID.END_FILE, self.mpv_end_file)
 
+        # set mpv to paused
+        self.mpv.pause = True
+
         # set web worker db access
         JukeboxWebWorker.pl_db = self.db_name
         # set web worker actions
@@ -86,7 +90,9 @@ class Jukebox:
             "playpause": self.playpause,
             "volup": self.volup,
             "voldn": self.voldn,
-            "getvol": self.getvol
+            "getvol": lambda: self.mpv_vol,
+            "getcurrent": lambda: self.currently_playing,
+            "ispaused": lambda: self.mpv.pause.val
         }
         config = {
             '/rq': {
@@ -126,8 +132,21 @@ class Jukebox:
             self.currently_playing = plid
 
         self.mpv.play(info["url"])
-        self.mpv.volume = self.mpv_vol
+        self.set_vol()
+
         return True
+
+    def set_vol(self):
+        # busy-wait until we can set the mpv vol
+        vol_set_flag = False
+        start_time = time.time()
+        # 5 seconds until we terminate
+        while not vol_set_flag and (time.time()-start_time < 5):
+            try:
+                self.mpv.volume = self.mpv_vol
+                vol_set_flag = True
+            except:
+                pass
 
     def playpause(self):
         if self.mpv.pause.val:
@@ -138,17 +157,14 @@ class Jukebox:
 
     def volup(self):
         self.mpv_vol = min(self.mpv_vol + 5.0, 100.0)
-        if not self.mpv.eof_reached.val:
-            self.mpv.volume = self.mpv_vol
+        if self.mpv.filename != '-1':
+            self.set_vol()
 
     def voldn(self):
         self.mpv_vol = max(0.0, self.mpv_vol - 5.0)
-        if not self.mpv.eof_reached.val:
-            self.mpv.volume = self.mpv_vol
+        if self.mpv.filename != '-1':
+            self.set_vol()
     
-    def getvol(self):
-        return self.mpv_vol
-
     def get_uri_from_id(self, plid):
         conn = sqlite.connect(self.db_name)
         cursor = conn.execute(
@@ -220,29 +236,53 @@ class JukeboxWebWorker(WebSocket):
         cmd = msg["cmd"]
         if cmd == "add" and "uri" in msg:
             self.add_uri(msg["uri"])
+
         elif cmd == "playlist":
             pl = self.get_pl()
             self.msg_success(pl)
+
+        elif cmd == "ispaused":
+            ispaused = self.jukebox_actions["ispaused"]()
+            self.msg_success({"ispaused":ispaused})
+
+        elif cmd == "volume":
+            vol = self.get_vol()
+            self.msg_success(vol)
+
+        elif cmd == "current":
+            cur = self.get_current()
+            self.msg_success(cur)
+
         elif cmd == "move_up" and "id" in msg:
             self.move_up(msg["id"])
+
         elif cmd == "play" and "id" in msg:
+            # unpaused from play()
+            if self.jukebox_actions["ispaused"]():
+                self.msg_broadcast({}, "playpause")
             if self.jukebox_actions["play"](msg["id"]):
                 self.msg_success()
+                self.msg_broadcast(self.get_current(), "current")
             else:
                 self.msg_fail()
+
         elif cmd == "playpause":
             if self.jukebox_actions["playpause"]():
                 self.msg_success()
+                self.msg_broadcast({}, "playpause")
             else:
                 self.msg_fail()
+
         elif cmd == "volup":
             self.jukebox_actions["volup"]()
             self.msg_broadcast({'value': self.jukebox_actions["getvol"]()}, "volume")
             self.msg_success()
+
         elif cmd == "voldn":
             self.jukebox_actions["voldn"]()
             self.msg_broadcast({'value': self.jukebox_actions["getvol"]()}, "volume")
             self.msg_success()
+
         else:
             self.msg_fail()
 
@@ -326,3 +366,15 @@ class JukeboxWebWorker(WebSocket):
             'playlist': pl
         }
         return msg
+
+    def get_vol(self):
+        vol = {
+            'volume': self.jukebox_actions["getvol"]()
+        }
+        return vol
+
+    def get_current(self):
+        cur = {
+            'current': self.jukebox_actions["getcurrent"]()
+        }
+        return cur

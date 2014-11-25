@@ -9,7 +9,6 @@ body {
 	display: -ms-flex;
 	display: -moz-flex;
 	display: flex;
-	height: 100%;
 
 }
 
@@ -23,4 +22,14 @@ body {
 
 .player > table {
 	display: inline-block;
+}
+
+#playlist {
+	margin: 0 auto;
+	width: 70%;
+	background-color: rgba(0,0,0,0.05);
+}
+
+h3 {
+	text-align: center;
 }

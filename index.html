@@ -26,14 +26,16 @@
 						<tr><td></td><td><button onclick="volDown()">v</button></td><td></td></tr>
 					</tbody>
 				</table>
-				<!-- Doesn't work yet
-				<form name="addVideo" onsubmit="return addVideo();">
-					Video URL:<br>
-					<input type="text" name="videoUrl"> <input type="submit" value="Add">
-				</form>
-				-->
+				<br>
+				Volume: <span id="volume"></span>
+				<br>
+				Add youtube url<br>
+				<input type="text" id="videoUrl"> <input type="submit" id="addVideo" value="Add">
+
 			</div>
 		</div>
-		
+		<h3>Playlist</h3>
+		<ol id="playlist">
+		</ol>
 	</body>
 </html>
