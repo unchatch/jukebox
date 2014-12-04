@@ -90,6 +90,7 @@ function guiUpdateVolume(vol) {
 
 function guiUpdateCurrentlyPlaying(current) {
 	if (current["current"] == null) return;
+	$(".playlist_elm > button").prop('disabled',false).text("play");
 	var id = "#" + current["current"];
 	$(id).text("playing");
 	$(id).prop("disabled", true);
