@@ -11,17 +11,6 @@ function playPause() {
 }
 
 /**
- * This function toggles the play pause button. It is called by the websocket's onmessage function.
- */
-function guiTogglePlayPause() {
-    if ($("#playpause").html() == "Play") {
-        $("#playpause").html("Pause");
-    } else {
-        $("#playpause").html("Play");
-    }
-}
-
-/**
  * This function plays a specified video.
  * @param id The video
  */
@@ -102,13 +91,24 @@ function playlistPlay(ev) {
 }
 
 /**
+ * This function toggles the play pause button. It is called by the websocket's onmessage function.
+ */
+function guiTogglePlayPause() {
+    if ($("#playpause").html() == "Play") {
+        $("#playpause").html("Pause");
+    } else {
+        $("#playpause").html("Play");
+    }
+}
+
+/**
  * Update the HTML backing the playlist. Called by the websocket's onmessage function.
  * @param playlist the playlist.
  */
 function guiUpdatePlaylist(playlist) {
     var $playlist = $("#playlist");
     $playlist.empty();
-    var lis = [];
+    var list = [];
     playlist.forEach(function (elm, idx, arr) {
         var li = document.createElement("li");
         li.className = "playlist_elm";
@@ -130,15 +130,24 @@ function guiUpdatePlaylist(playlist) {
         button.textContent = "⛝";
         button.onClick = remove(elm.id);
         li.appendChild(close);
-        lis.push(li);
+
+        list.push(li);
     });
-    $playlist.append(lis);
+    $playlist.append(list);
 }
 
+/**
+ * Update the volume GUI. Called by the websocket's onmessage function.
+ * @param vol The new volume
+ */
 function guiUpdateVolume(vol) {
     $("#volume").text(vol + " %");
 }
 
+/**
+ * Update the currently playing GUI. Called by the websocket's onmessage function.
+ * @param current The currently playing song.
+ */
 function guiUpdateCurrentlyPlaying(current) {
     if (current["current"] == null) return;
     $(".playlist_elm > button").prop('disabled', false).text("play");
@@ -147,9 +156,7 @@ function guiUpdateCurrentlyPlaying(current) {
     $(id).prop("disabled", true);
 }
 
-function generalFail(req) {
-    console.log("GENERAL FAIL ON REQUEST:", req);
-}
+
 
 $(document).ready(function () {
     if (!window.WebSocket) {
