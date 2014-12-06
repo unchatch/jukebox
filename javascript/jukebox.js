@@ -72,7 +72,8 @@ function volDown() {
 function remove(id) {
     sendMsg({'cmd': 'remove', 'id': id}, function (e) {
         // success
-        ('#' + id + "_li").remove();
+        $('#' + id + "_li").remove();
+        console.log("successfully removed " + id);
     }, function (e) {
         // failure
         alert("Failed to remove video");
@@ -117,13 +118,14 @@ function guiUpdatePlaylist(playlist) {
 
         var button = document.createElement("button");
         button.id = elm.id;
+        button.class = "play";
         button.textContent = "play";
         button.onclick = playlistPlay;
         li.appendChild(button);
 
         var close = document.createElement("button");
         close.textContent = "remove";
-        close.onClick = remove.bind(elm.id);
+        close.onclick = remove.bind(null, elm.id);
         li.appendChild(close);
 
         var link = document.createElement("a");
@@ -132,7 +134,6 @@ function guiUpdatePlaylist(playlist) {
         link.textContent = elm.title;
         link.target = "_blank";
         li.appendChild(link);
-
 
         list.push(li);
     });
@@ -153,7 +154,7 @@ function guiUpdateVolume(vol) {
  */
 function guiUpdateCurrentlyPlaying(current) {
     if (current["current"] == null) return;
-    $(".playlist_elm > button").prop('disabled', false).text("play");
+    $(".playlist_elm > button > .play").prop('disabled', false).text("play");
     var id = "#" + current["current"];
     $(id).text("playing");
     $(id).prop("disabled", true);

@@ -29,6 +29,8 @@ body {
 	height: 40px;
 	border: none;
 	background-color: rgba(0, 0, 0, 0.05);
+	font-family: u2000;
+	font: 12px Arial,Helvetica,sans-serif;
 }
 
 .controls-container > table button:hover {
