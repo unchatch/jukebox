@@ -35,6 +35,7 @@ function addVideo(youtubeURL) {
 	});
 }
 
+
 function volUp() {
 	sendMsg({'cmd':'volup'}, function(e) {
 	}, function(e) {
@@ -49,6 +50,12 @@ function volDown() {
 	});
 }
 
+function remove(id) {
+	sendMsg({'cmd':'remove', 'id': id}, function(e) {
+	}, function(e) {
+		alert("Failed to remove video");
+	});
+}
 
 //////
 
@@ -78,6 +85,10 @@ function guiUpdatePlaylist(playlist) {
 		link.target = "_blank";
 		li.appendChild(link);
 
+		var close = document.createElement("button");
+		button.textContent = "⛝";
+		button.onClick = remove(elm.id);
+		li.appendChild(close);
 		lis.push(li);
 	});
 

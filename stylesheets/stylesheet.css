@@ -47,8 +47,12 @@ body {
 	overflow: auto;
 }
 
-#playlist {
+ol#playlist {
 	margin: 0 auto;
 	list-style-position: inside;
 	text-align: left;
+}
+
+ol#playlist > li:after {
+	content: "⛝";
 }
