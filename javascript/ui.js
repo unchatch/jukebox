@@ -8,6 +8,8 @@ $(window).resize(function() {
 
         if ($(".controls-container").css("float") == "left") {
             $(".controls-container").css("margin-top", $(this).height() / 2 - $(".controls-container").height());
+        } else {
+            $(".controls-container").css("margin-top", 0);
         }
 
     }
