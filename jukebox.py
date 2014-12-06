@@ -22,8 +22,6 @@ PLAYLIST_SCHEMA = """
         next VARCHAR(50)
     )"""
 
-VISIBLE_HOST = False
-
 def get_youtube_info(url):
     ydl = YoutubeDL()
     ydl.add_default_info_extractors()
@@ -39,7 +37,7 @@ def msg_broadcast(jsonMsg, msgType):
 
 class Jukebox:
     
-    def __init__(self, db=None, reset_db=False, ws_port=9000):
+    def __init__(self, db=None, reset_db=False, ws_port=9000, visible_host=False):
         if not db:
             raise NameError("Database not specified")
 
@@ -60,6 +58,7 @@ class Jukebox:
         self.mpv_shutdown = False
         self.currently_playing = None
         self.mpv_vol = 100.0
+        self.visible_host = visible_host
 
     def mpv_end_file(self):
         if not self.mpv_user_change:
@@ -108,7 +107,7 @@ class Jukebox:
             }
         }
         cherrypy.config.update({'server.socket_port': self.ws_port})
-        if VISIBLE_HOST:
+        if self.visible_host:
             cherrypy.config.update({'server.socket_host': '0.0.0.0'})
         WebSocketPlugin(cherrypy.engine).subscribe()
         cherrypy.tools.websocket = WebSocketTool()
