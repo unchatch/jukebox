@@ -166,7 +166,7 @@ $(document).ready(function () {
         return;
     }
 
-    var ws = new WebSocket("ws://152.23.149.184:9000/rq");
+    var ws = new WebSocket("ws://localhost:9000/rq");
 
     sendMsg = (function (ws) {
         var ws = ws;
