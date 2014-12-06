@@ -11,6 +11,6 @@ $(window).resize(function() {
         }
         $("ol#playlist").css("height", $(this).height() - $("ol#playlist").offset().top - 60);
     }
-    });
+});
 
 $(window).resize();

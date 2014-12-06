@@ -1,41 +1,16 @@
 /**
- * This function toggles the play/pause state of the jukebox.
+ * This function adds a video to the playlist.
+ * @param youtubeURL The video to add
  */
-function playPause() {
-    sendMsg({'cmd': 'playpause'}, function () {
-        // success
-    }, function () {
-        // failure
-        alert("Failed to play/pause");
-    });
-}
-
-/**
- * This function plays a specified video.
- * @param id The video
- */
-function play(id) {
-    $("#" + id).text("loading");
-    $("#" + id).prop("disabled", true);
-    sendMsg({'cmd': 'play', 'id': id}, function () {
-        // success
+function addVideo(youtubeURL) {
+    $("#videoUrl").prop("disabled", true);
+    sendMsg({'cmd': 'add', 'uri': youtubeURL}, function (e) {
+        $("#videoUrl").prop("disabled", false);
+        $("#videoUrl").val("");
     }, function (e) {
-        // failure
-        alert("Failed to play video");
-        $("#" + id).prop("disabled", false);
-        $("#" + id).text("play");
-    });
-}
-
-/**
- * This function should either rewind or play the previous video in the playlist...
- */
-function rewind() {
-    sendMsg({'cmd': 'rewind'}, function() {
-        // success
-    }, function() {
-        // failure
-        alert("Rewind is not supported");
+        alert("Failed to add video");
+        $("#videoUrl").prop("disabled", false);
+        $("#videoUrl").val("");
     });
 }
 
@@ -52,18 +27,76 @@ function fastforward() {
 }
 
 /**
- * This function adds a video to the playlist.
- * @param youtubeURL The video to add
+ * This function moves a video up one slot in the playlist. Primitive sorting.
+ * @param id The video to move up
  */
-function addVideo(youtubeURL) {
-    $("#videoUrl").prop("disabled", true);
-    sendMsg({'cmd': 'add', 'uri': youtubeURL}, function (e) {
-        $("#videoUrl").prop("disabled", false);
-        $("#videoUrl").val("");
+function moveUp(id) {
+    var $button = $("#moveup" + id);
+    $button.prop("disabled", true);
+    sendMsg({'cmd': 'moveup', 'id': id}, function() {
+        // success
+        var $li = $button.parent();
+        $li.insertAfter($li.prev().prev());
+    }, function() {
+        // failure
+    });
+    $button.prop("disabled", false);
+
+}
+/**
+ * This function plays a specified video.
+ * @param id The video
+ */
+function play(id) {
+    $("#play" + id).text("loading");
+    $("#play" + id).prop("disabled", true);
+    sendMsg({'cmd': 'play', 'id': id}, function () {
+        // success
     }, function (e) {
-        alert("Failed to add video");
-        $("#videoUrl").prop("disabled", false);
-        $("#videoUrl").val("");
+        // failure
+        alert("Failed to play video");
+        $("#play" + id).prop("disabled", false);
+        $("#play" + id).text("play");
+    });
+}
+
+/**
+ * This function toggles the play/pause state of the jukebox.
+ */
+function playPause() {
+    sendMsg({'cmd': 'playpause'}, function () {
+        // success
+    }, function () {
+        // failure
+        alert("Failed to play/pause");
+    });
+}
+
+/**
+ * This function removes a video from the playlist.
+ * @param id The video to remove
+ */
+function remove(id) {
+    $('#remove' + id).disable();
+    sendMsg({'cmd': 'remove', 'id': id}, function (e) {
+        // success
+        console.log("successfully removed " + id);
+    }, function (e) {
+        // failure
+        alert("Failed to remove video");
+        $('#remove' + id).enable();
+    });
+}
+
+/**
+ * This function should either rewind or play the previous video in the playlist...
+ */
+function rewind() {
+    sendMsg({'cmd': 'rewind'}, function() {
+        // success
+    }, function() {
+        // failure
+        alert("Rewind is not supported");
     });
 }
 
@@ -92,25 +125,6 @@ function volDown() {
 }
 
 /**
- * This function removes a video from the playlist.
- * @param id The video to remove
- */
-function remove(id) {
-    sendMsg({'cmd': 'remove', 'id': id}, function (e) {
-        // success
-        $('#' + id + "_li").remove();
-        console.log("successfully removed " + id);
-    }, function (e) {
-        // failure
-        alert("Failed to remove video");
-    });
-}
-
-//////
-
-var sendMsg;
-
-/**
  * Play a video in the playlist
  * @param ev The video to play
  */
@@ -118,6 +132,8 @@ function playlistPlay(ev) {
     play(ev.toElement.id);
 }
 
+
+////// GUI update functions
 /**
  * This function toggles the play pause button. It is called by the websocket's onmessage function.
  */
@@ -143,16 +159,23 @@ function guiUpdatePlaylist(playlist) {
         li.id = elm.id + "_li";
 
         var button = document.createElement("button");
-        button.id = elm.id;
+        button.id = "play" + elm.id;
         button.class = "play";
         button.textContent = "play";
         button.onclick = playlistPlay;
         li.appendChild(button);
 
-        var close = document.createElement("button");
-        close.textContent = "remove";
-        close.onclick = remove.bind(null, elm.id);
-        li.appendChild(close);
+        var remove = document.createElement("button");
+        remove.textContent = "remove";
+        remove.id = "remove" + elm.id;
+        remove.onclick = remove.bind(null, elm.id);
+        li.appendChild(remove);
+
+        var moveUp = document.createElement("button");
+        moveUp.textContent = "⇪";
+        moveUp.id = "moveup" + elm.id;
+        moveUp.onclick = moveUp.bind(null, elm.id);
+        li.appendChild(moveUp);
 
         var link = document.createElement("a");
         link.href = elm.uri;
@@ -186,6 +209,8 @@ function guiUpdateCurrentlyPlaying(current) {
     $(id).prop("disabled", true);
 }
 
+// websocket interface
+var sendMsg;
 
 $(document).ready(function () {
     if (!window.WebSocket) {
