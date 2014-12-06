@@ -166,7 +166,7 @@ class Jukebox:
 
     def remove(id):
         print("not implemented");
-        // TODO implement this.
+        # TODO implement this.
         return false;
 
     def volup(self):
