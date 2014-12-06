@@ -22,6 +22,8 @@ PLAYLIST_SCHEMA = """
         next VARCHAR(50)
     )"""
 
+VISIBLE_HOST = False
+
 def get_youtube_info(url):
     ydl = YoutubeDL()
     ydl.add_default_info_extractors()
@@ -30,6 +32,10 @@ def get_youtube_info(url):
     except:
         return None
     return info
+
+def msg_broadcast(jsonMsg, msgType):
+    jsonMsg.update({'broadcast':True, 'type': msgType})
+    cherrypy.engine.publish('websocket-broadcast', json.dumps(jsonMsg))
 
 class Jukebox:
     
@@ -66,6 +72,7 @@ class Jukebox:
             if res is not None:
                 new_plid = res[0]
                 self._play(new_plid)
+                msg_broadcast(self.currently_playing, "current")
         with self.lock:
             self.mpv_user_change = False
 
@@ -101,6 +108,8 @@ class Jukebox:
             }
         }
         cherrypy.config.update({'server.socket_port': self.ws_port})
+        if VISIBLE_HOST:
+            cherrypy.config.update({'server.socket_host': '0.0.0.0'})
         WebSocketPlugin(cherrypy.engine).subscribe()
         cherrypy.tools.websocket = WebSocketTool()
 
@@ -210,10 +219,6 @@ class JukeboxWebWorker(WebSocket):
         data.update({'status':True,'rqid':self.rqid})
         self.send(json.dumps(data))
 
-    def msg_broadcast(self, jsonMsg, msgType):
-        jsonMsg.update({'broadcast':True, 'type': msgType})
-        cherrypy.engine.publish('websocket-broadcast', json.dumps(jsonMsg))
-        
     def received_message(self, message):
         self.rqid = None
 
@@ -264,17 +269,17 @@ class JukeboxWebWorker(WebSocket):
         elif cmd == "play" and "id" in msg:
             # unpaused from play()
             if self.jukebox_actions["ispaused"]():
-                self.msg_broadcast({}, "playpause")
+                msg_broadcast({}, "playpause")
             if self.jukebox_actions["play"](msg["id"]):
                 self.msg_success()
-                self.msg_broadcast(self.get_current(), "current")
+                msg_broadcast(self.get_current(), "current")
             else:
                 self.msg_fail()
 
         elif cmd == "playpause":
             if self.jukebox_actions["playpause"]():
                 self.msg_success()
-                self.msg_broadcast({}, "playpause")
+                msg_broadcast({}, "playpause")
             else:
                 self.msg_fail()
 
@@ -287,12 +292,12 @@ class JukeboxWebWorker(WebSocket):
 
         elif cmd == "volup":
             self.jukebox_actions["volup"]()
-            self.msg_broadcast({'value': self.jukebox_actions["getvol"]()}, "volume")
+            msg_broadcast({'value': self.jukebox_actions["getvol"]()}, "volume")
             self.msg_success()
 
         elif cmd == "voldn":
             self.jukebox_actions["voldn"]()
-            self.msg_broadcast({'value': self.jukebox_actions["getvol"]()}, "volume")
+            msg_broadcast({'value': self.jukebox_actions["getvol"]()}, "volume")
             self.msg_success()
 
         else:
@@ -327,9 +332,33 @@ class JukeboxWebWorker(WebSocket):
         except:
             self.msg_fail()
         else:
-            self.msg_broadcast(self.get_pl(), "playlist")
+            msg_broadcast(self.get_pl(), "playlist")
             self.msg_success()
 
+    def remove(self, plid):
+        try:
+            conn = sqlite.connect(self.pl_db, isolation_level="EXCLUSIVE")
+
+            prev_cursor = conn.execute(
+                "SELECT plid FROM playlist WHERE next=?", (plid,))
+            prev_cursor_res = prev_cursor.fetchone()
+            if prev_cursor_res is not None:
+                prev_plid = prev_cursor_res[0]
+                conn.execute(
+                    """UPDATE playlist SET next=(
+                        SELECT next from playlist WHERE plid=?)
+                        WHERE plid=?""", (plid, prev_plid))
+                conn.execute(
+                    """DELETE FROM playlist WHERE plid=?""", (plid,))
+                conn.commit()
+            conn.close()
+        except:
+            self.msg_fail()
+        else:
+            pl = self.get_pl()
+            msg_broadcast(pl, "playlist")
+            self.msg_success()
+ 
     def move_up(self, plid):
         try:
             conn = sqlite.connect(self.pl_db, isolation_level="EXCLUSIVE")
@@ -356,7 +385,7 @@ class JukeboxWebWorker(WebSocket):
             self.msg_fail()
         else:
             pl = self.get_pl()
-            cherrypy.engine.publish('websocket-broadcast', json.dumps(pl))
+            msg_broadcast(pl, "playlist")
             self.msg_success()
 
     def get_pl(self):
