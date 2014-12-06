@@ -72,6 +72,7 @@ function volDown() {
 function remove(id) {
     sendMsg({'cmd': 'remove', 'id': id}, function (e) {
         // success
+        ('#' + id + "_li").remove();
     }, function (e) {
         // failure
         alert("Failed to remove video");
@@ -112,6 +113,7 @@ function guiUpdatePlaylist(playlist) {
     playlist.forEach(function (elm, idx, arr) {
         var li = document.createElement("li");
         li.className = "playlist_elm";
+        li.id = elem.id + "_li";
 
         var button = document.createElement("button");
         button.id = elm.id;
@@ -127,8 +129,8 @@ function guiUpdatePlaylist(playlist) {
         li.appendChild(link);
 
         var close = document.createElement("button");
-        button.textContent = "⛝";
-        button.onClick = remove(elm.id);
+        close.textContent = "⛝";
+        close.onClick = remove(elm.id);
         li.appendChild(close);
 
         list.push(li);
@@ -155,7 +157,6 @@ function guiUpdateCurrentlyPlaying(current) {
     $(id).text("playing");
     $(id).prop("disabled", true);
 }
-
 
 
 $(document).ready(function () {
