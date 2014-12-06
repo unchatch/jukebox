@@ -80,6 +80,11 @@ body {
 	overflow: auto
 }
 
+.playlist-container ol#playlist > li {
+	overflow: hidden;
+	white-space: nowrap;
+}
+
 .playlist-container ol#playlist > li:hover {
 	background-color: rgba(0, 0, 0, 0.1);
 }
