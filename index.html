@@ -15,27 +15,30 @@
 		<title>HatCH Jukebox</title>
 	</head>
 	<body>
-		<div class="vertical-container">
-			<div class="player">
-				<h1>HatCH Jukebox</h1>
+		<div class="page-content">
+			<h1>HatCH Jukebox</h1>
+			<div class="controls-container">
+				<h2>Controls</h2>
 				<table>
 					<tbody>
-						<tr><td></td><td><button onclick="volUp()">^</button></td><td></td></tr>
-						<tr><td><button onclick="rewind()">&lt;&lt;</button></td><td><button id="playpause" onclick="playPause()">Play</button></td><td><button onclick="fastforward()">&gt;&gt;</button></td></tr>
-						</tr>
-						<tr><td></td><td><button onclick="volDown()">v</button></td><td></td></tr>
+					<tr><td></td><td><button onclick="volUp()">^</button></td><td></td></tr>
+					<tr><td><button onclick="rewind()">&lt;&lt;</button></td><td><button id="playpause" onclick="playPause()">Play</button></td><td><button onclick="fastforward()">&gt;&gt;</button></td></tr>
+					</tr>
+					<tr><td></td><td><button onclick="volDown()">v</button></td><td></td></tr>
 					</tbody>
 				</table>
 				<br>
-				Volume: <span id="volume"></span>
+				<span>Volume: <span id="volume"></span></span>
 				<br>
-				Add youtube url<br>
-				<input type="text" id="videoUrl"> <input type="submit" id="addVideo" value="Add">
-
+				<span class="input">Add youtube url: <input type="text" id="videoUrl"><input type="submit" id="addVideo" value="Add"></span>
+			</div>
+			<div class="playlist-container">
+				<h2>Playlist</h2>
+				<ol id="playlist">
+				</ol>
 			</div>
 		</div>
-		<h3>Playlist</h3>
-		<ol id="playlist">
-		</ol>
+
+
 	</body>
 </html>
