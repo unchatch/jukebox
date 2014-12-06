@@ -3,13 +3,15 @@
  */
 
 $(window).resize(function() {
+    var $controls = $(".controls-container");
+    var $playlist = $("ol#playlist");
     if ($(this).height() > 400) {
-        if ($(".controls-container").css("float") == "left") {
-            $(".controls-container").css("margin-top", $(this).height() / 2 - $(".controls-container").height());
+        if ($controls.css("float") == "left") {
+            $controls.css("margin-top", $(this).height() / 2 - $controls.height());
         } else {
-            $(".controls-container").css("margin-top", 0);
+            $controls.css("margin-top", 0);
         }
-        $("ol#playlist").css("height", $(this).height() - $("ol#playlist").offset().top - 60);
+        $playlist.css("height", $(this).height() - $playlist.offset().top - 60);
     }
 });
 
