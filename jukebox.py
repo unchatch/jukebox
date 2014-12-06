@@ -155,6 +155,11 @@ class Jukebox:
             self.mpv.pause = True
         return True
 
+    def remove(id):
+        print("not implemented");
+        // TODO implement this.
+        return false;
+
     def volup(self):
         self.mpv_vol = min(self.mpv_vol + 5.0, 100.0)
         if self.mpv.filename != '-1':
@@ -272,6 +277,13 @@ class JukeboxWebWorker(WebSocket):
                 self.msg_broadcast({}, "playpause")
             else:
                 self.msg_fail()
+
+        elif cmd == "remove" and "id" in msg:
+            # remove id from playlist, stop if playing
+            if self.jukebox_actions["remove"](msg["id"]):
+               self.msg_success()
+            else:
+               self.msg_fail()
 
         elif cmd == "volup":
             self.jukebox_actions["volup"]()

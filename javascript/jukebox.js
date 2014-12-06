@@ -113,13 +113,18 @@ function guiUpdatePlaylist(playlist) {
     playlist.forEach(function (elm, idx, arr) {
         var li = document.createElement("li");
         li.className = "playlist_elm";
-        li.id = elem.id + "_li";
+        li.id = elm.id + "_li";
 
         var button = document.createElement("button");
         button.id = elm.id;
         button.textContent = "play";
         button.onclick = playlistPlay;
         li.appendChild(button);
+
+        var close = document.createElement("button");
+        close.textContent = "remove";
+        close.onClick = remove.bind(elm.id);
+        li.appendChild(close);
 
         var link = document.createElement("a");
         link.href = elm.uri;
@@ -128,10 +133,6 @@ function guiUpdatePlaylist(playlist) {
         link.target = "_blank";
         li.appendChild(link);
 
-        var close = document.createElement("button");
-        close.textContent = "⛝";
-        close.onClick = remove(elm.id);
-        li.appendChild(close);
 
         list.push(li);
     });
@@ -165,7 +166,7 @@ $(document).ready(function () {
         return;
     }
 
-    var ws = new WebSocket("ws://localhost:9000/rq");
+    var ws = new WebSocket("ws://152.23.149.184:9000/rq");
 
     sendMsg = (function (ws) {
         var ws = ws;
