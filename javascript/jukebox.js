@@ -18,10 +18,36 @@ function play(id) {
     $("#" + id).text("loading");
     $("#" + id).prop("disabled", true);
     sendMsg({'cmd': 'play', 'id': id}, function () {
+        // success
     }, function (e) {
+        // failure
         alert("Failed to play video");
         $("#" + id).prop("disabled", false);
         $("#" + id).text("play");
+    });
+}
+
+/**
+ * This function should either rewind or play the previous video in the playlist...
+ */
+function rewind() {
+    sendMsg({'cmd': 'rewind'}, function() {
+        // success
+    }, function() {
+        // failure
+        alert("Rewind is not supported");
+    });
+}
+
+/**
+ * This function should either fast forward or play the next video in the playlist...
+ */
+function fastforward() {
+    sendMsg({'cmd': 'fastforward'}, function() {
+        // success
+    }, function() {
+        // failure
+        alert("Fast forward is not supported");
     });
 }
 
