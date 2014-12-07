@@ -165,11 +165,11 @@ function guiUpdatePlaylist(playlist) {
         button.onclick = playlistPlay;
         li.appendChild(button);
 
-        var remove = document.createElement("button");
-        remove.textContent = "remove";
-        remove.id = "remove" + elm.id;
-        remove.onclick = remove.bind(null, elm.id);
-        li.appendChild(remove);
+        var removeButton = document.createElement("button");
+        removeButton.textContent = "remove";
+        removeButton.id = "remove" + elm.id;
+        removeButton.onclick = remove.bind(null, elm.id);
+        li.appendChild(removeButton);
 
         var moveUp = document.createElement("button");
         moveUp.textContent = "⇪";
