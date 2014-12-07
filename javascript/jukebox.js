@@ -171,11 +171,11 @@ function guiUpdatePlaylist(playlist) {
         removeButton.onclick = remove.bind(null, elm.id);
         li.appendChild(removeButton);
 
-        var moveUp = document.createElement("button");
-        moveUp.textContent = "⇪";
-        moveUp.id = "moveup" + elm.id;
-        moveUp.onclick = moveUp.bind(null, elm.id);
-        li.appendChild(moveUp);
+        var moveUpButton = document.createElement("button");
+        moveUpButton.textContent = "⇪";
+        moveUpButton.id = "moveup" + elm.id;
+        moveUpButton.onclick = moveUp.bind(null, elm.id);
+        li.appendChild(moveUpButton);
 
         var link = document.createElement("a");
         link.href = elm.uri;
