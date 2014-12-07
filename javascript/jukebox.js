@@ -124,15 +124,6 @@ function volDown() {
     });
 }
 
-/**
- * Play a video in the playlist
- * @param ev The video to play
- */
-function playlistPlay(ev) {
-    play(ev.toElement.id);
-}
-
-
 ////// GUI update functions
 /**
  * This function toggles the play pause button. It is called by the websocket's onmessage function.
@@ -162,7 +153,7 @@ function guiUpdatePlaylist(playlist) {
         button.id = "play" + elm.id;
         button.class = "play";
         button.textContent = "play";
-        button.onclick = playlistPlay;
+        button.onclick = play.bind(null, elm.id);
         li.appendChild(button);
 
         var removeButton = document.createElement("button");
