@@ -222,12 +222,14 @@ $(document).ready(function () {
                 switch (resp["type"]) {
                     case "playlist":
                         guiUpdatePlaylist(resp["playlist"]);
+                        guiUpdateCurrentlyPlaying(resp);
                         break;
                     case "volume":
                         guiUpdateVolume(resp["value"]);
                         break;
                     case "playpause":
                         guiTogglePlayPause();
+                        guiUpdateCurrentlyPlaying(resp);
                         break;
                     case "current":
                         guiUpdateCurrentlyPlaying(resp);
