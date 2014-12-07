@@ -172,7 +172,7 @@ function guiUpdatePlaylist(playlist) {
         li.appendChild(removeButton);
 
         var moveUpButton = document.createElement("button");
-        moveUpButton.textContent = "⇪";
+        moveUpButton.textContent = "move up";
         moveUpButton.id = "moveup" + elm.id;
         moveUpButton.onclick = moveUp.bind(null, elm.id);
         li.appendChild(moveUpButton);
