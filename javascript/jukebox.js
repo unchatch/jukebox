@@ -151,7 +151,7 @@ function guiUpdatePlaylist(playlist) {
 
         var button = document.createElement("button");
         button.id = "play" + elm.id;
-        button.class = "play";
+        button.className = "play";
         button.textContent = "play";
         button.onclick = play.bind(null, elm.id);
         li.appendChild(button);
@@ -195,7 +195,7 @@ function guiUpdateVolume(vol) {
 function guiUpdateCurrentlyPlaying(current) {
     if (current["current"] == null) return;
     $(".playlist_elm > button > .play").prop('disabled', false).text("play");
-    var id = "#" + current["current"];
+    var id = "#play" + current["current"];
     $(id).text("playing");
     $(id).prop("disabled", true);
 }
