@@ -77,14 +77,14 @@ function playPause() {
  * @param id The video to remove
  */
 function remove(id) {
-    $('#remove' + id).disable();
+    $('#remove' + id).prop("disabled", true);
     sendMsg({'cmd': 'remove', 'id': id}, function (e) {
         // success
         console.log("successfully removed " + id);
     }, function (e) {
         // failure
         alert("Failed to remove video");
-        $('#remove' + id).enable();
+        $('#remove' + id).prop("disabled", false);
     });
 }
 
