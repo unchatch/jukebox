@@ -57,6 +57,22 @@ body {
 	padding-right: 5px;
 }
 
+.controls-container .input input::-webkit-input-placeholder {
+	color: rgb(66, 66, 66);
+}
+
+.controls-container .input input:-moz-placeholder { /* Firefox 18- */
+	color: rgb(66, 66, 66);
+}
+
+.controls-container .input input::-moz-placeholder {  /* Firefox 19+ */
+	color: rgb(66, 66, 66);
+}
+
+.controls-container .input input:-ms-input-placeholder {
+	color: rgb(66, 66, 66);
+}
+
 .controls-container .input input:hover {
 	background-color: rgba(0, 0, 0, 0.1);
 }
