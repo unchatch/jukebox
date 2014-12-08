@@ -113,6 +113,16 @@ body {
 	margin: 1px;
 }
 
+.playlist-container ol#playlist > li > button:first-of-type {
+	border-bottom-left-radius: 5px;
+	border-top-left-radius: 5px;
+}
+
+.playlist-container ol#playlist > li > button:last-of-type {
+	border-bottom-right-radius: 5px;
+	border-top-right-radius: 5px;
+}
+
 .playlist-container ol#playlist > li > button:hover {
 	background-color: rgba(0, 0, 0, 0.1);
 }
