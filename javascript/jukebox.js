@@ -4,12 +4,15 @@
  */
 function addVideo(youtubeURL) {
     $("#videoUrl").prop("disabled", true);
+	$("#addVideo").prop("disabled", true);
     sendMsg({'cmd': 'add', 'uri': youtubeURL}, function (e) {
         $("#videoUrl").prop("disabled", false);
+		$("#addVideo").prop("disabled", false);
         $("#videoUrl").val("");
     }, function (e) {
         alert("Failed to add video");
         $("#videoUrl").prop("disabled", false);
+		$("#addVideo").prop("disabled", false);
         $("#videoUrl").val("");
     });
 }
@@ -78,6 +81,7 @@ function playPause() {
  */
 function remove(id) {
     $('#remove' + id).prop("disabled", true);
+	console.log(id)
     sendMsg({'cmd': 'remove', 'id': id}, function (e) {
         // success
         console.log("successfully removed " + id);
@@ -107,8 +111,7 @@ function volUp() {
     sendMsg({'cmd': 'volup'}, function (e) {
         // success
     }, function (e) {
-        // failure
-        alert("Failed to increase volume");
+        // failure; ignore
     });
 }
 
@@ -119,8 +122,7 @@ function volDown() {
     sendMsg({'cmd': 'voldn'}, function (e) {
         // success
     }, function (e) {
-        // failure
-        alert("Failed to decrease volume");
+        // failure; ignore
     });
 }
 
@@ -128,11 +130,12 @@ function volDown() {
 /**
  * This function toggles the play pause button. It is called by the websocket's onmessage function.
  */
-function guiTogglePlayPause() {
-    if ($("#playpause").html() == "Play") {
-        $("#playpause").html("Pause");
+function guiTogglePlayPause(state) {
+	var disabled = currently_playing == null;
+    if (state) {
+        $("#playpause").html("Play").prop("disabled", disabled);
     } else {
-        $("#playpause").html("Play");
+        $("#playpause").html("Pause").prop("disabled", disabled);
     }
 }
 
@@ -147,25 +150,25 @@ function guiUpdatePlaylist(playlist) {
     playlist.forEach(function (elm, idx, arr) {
         var li = document.createElement("li");
         li.className = "playlist_elm";
-        li.id = elm.id + "_li";
+        li.id = idx + "_li";
 
         var button = document.createElement("button");
-        button.id = "play" + elm.id;
+        button.id = "play" + idx;
         button.className = "play";
         button.textContent = "play";
-        button.onclick = play.bind(null, elm.id);
+        button.onclick = play.bind(null, idx);
         li.appendChild(button);
 
         var removeButton = document.createElement("button");
         removeButton.textContent = "remove";
-        removeButton.id = "remove" + elm.id;
-        removeButton.onclick = remove.bind(null, elm.id);
+        removeButton.id = "remove" + idx;
+        removeButton.onclick = remove.bind(null, idx);
         li.appendChild(removeButton);
 
         var moveUpButton = document.createElement("button");
         moveUpButton.textContent = "move up";
-        moveUpButton.id = "moveup" + elm.id;
-        moveUpButton.onclick = moveUp.bind(null, elm.id);
+        moveUpButton.id = "moveup" + idx;
+        moveUpButton.onclick = moveUp.bind(null, idx);
         li.appendChild(moveUpButton);
 
         var link = document.createElement("a");
@@ -179,6 +182,9 @@ function guiUpdatePlaylist(playlist) {
         list.push(li);
     });
     $playlist.append(list);
+
+	// update currently playing
+	guiUpdateCurrentlyPlaying(currently_playing);
 }
 
 /**
@@ -193,10 +199,12 @@ function guiUpdateVolume(vol) {
  * Update the currently playing GUI. Called by the websocket's onmessage function.
  * @param current The currently playing song.
  */
+var currently_playing = null;
 function guiUpdateCurrentlyPlaying(current) {
-    if (current["current"] == null) return;
-    $(".playlist_elm > button > .play").prop('disabled', false).text("play");
-    var id = "#play" + current["current"];
+	currently_playing = current;
+    if (current == null) return;
+    $(".playlist_elm > button.play").prop('disabled', false).text("play");
+    var id = "#play" + current;
     $(id).text("playing");
     $(id).prop("disabled", true);
 }
@@ -219,21 +227,23 @@ $(document).ready(function () {
 
         ws.onmessage = function (ev) {
             resp = JSON.parse(ev.data);
-            if (resp["broadcast"] === true) {
-                switch (resp["type"]) {
+			console.log(resp);
+
+            if (resp["type"] == "broadcast") {
+				var payload = resp["payload"]
+                switch (resp["label"]) {
                     case "playlist":
-                        guiUpdatePlaylist(resp["playlist"]);
-                        guiUpdateCurrentlyPlaying(resp);
+                        guiUpdatePlaylist(payload);
                         break;
                     case "volume":
-                        guiUpdateVolume(resp["value"]);
+                        guiUpdateVolume(payload);
                         break;
-                    case "playpause":
-                        guiTogglePlayPause();
-                        guiUpdateCurrentlyPlaying(resp);
+                    case "paused":
+                        guiTogglePlayPause(payload);
+                        guiUpdateCurrentlyPlaying(currently_playing);
                         break;
                     case "current":
-                        guiUpdateCurrentlyPlaying(resp);
+                        guiUpdateCurrentlyPlaying(payload);
                         break;
                     default:
                         console.log("BAD BROADCAST: ", resp);
@@ -270,20 +280,20 @@ $(document).ready(function () {
 
     ws.onopen = function (ev) {
         console.log("WS Ready");
-        sendMsg({"cmd": "playlist"}, function (e) {
-            guiUpdatePlaylist(e["playlist"]);
+        sendMsg({"cmd": "get_playlist"}, function (e) {
+            guiUpdatePlaylist(e["payload"]);
         }, function (e) {
         });
-        sendMsg({"cmd": "volume"}, function (e) {
-            guiUpdateVolume(e["volume"]);
+        sendMsg({"cmd": "get_volume"}, function (e) {
+            guiUpdateVolume(e["payload"]);
         }, function (e) {
         });
-        sendMsg({"cmd": "current"}, function (e) {
-            guiUpdateCurrentlyPlaying(e);
+        sendMsg({"cmd": "get_current"}, function (e) {
+            guiUpdateCurrentlyPlaying(e["payload"]);
         }, function (e) {
         });
-        sendMsg({"cmd": "ispaused"}, function (e) {
-            $("#playpause").html(e.ispaused ? "Play" : "Pause");
+        sendMsg({"cmd": "get_paused"}, function (e) {
+			guiTogglePlayPause(e["payload"])
         }, function (e) {
         });
     };

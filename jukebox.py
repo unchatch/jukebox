@@ -1,26 +1,35 @@
 import os
+import sys
 import pdb
 import json
-import sqlite3 as sqlite
 import threading
 import cherrypy
 import mpv
 import time
+import queue
 from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool, WebSocket
+from ws4py.client import WebSocketBaseClient
 from youtube_dl import YoutubeDL
 
 # load lua libs for mpv to play youtube urls directly w/o
 # translation with youtube_dl
 #mpv.load_lua()
 
-PLAYLIST_SCHEMA = """
-    CREATE TABLE playlist (
-        plid integer primary key autoincrement,
-        title TEXT,
-        uri TEXT,
-        votes INTEGER,
-        next VARCHAR(50)
-    )"""
+# debug flag
+DEBUG = True
+
+# Where the playlist file is located
+PLAYLIST_FILE = "playlist.json"
+
+# WS Port
+WS_PORT = 9000
+
+# host visibility
+VISIBILITY = False
+
+def debug(msg):
+    if DEBUG:
+        print(">> DEBUG: ", msg)
 
 def get_youtube_info(url):
     ydl = YoutubeDL()
@@ -31,382 +40,333 @@ def get_youtube_info(url):
         return None
     return info
 
-def msg_broadcast(jsonMsg, msgType):
-    jsonMsg.update({'broadcast':True, 'type': msgType})
-    cherrypy.engine.publish('websocket-broadcast', json.dumps(jsonMsg))
-
-class Jukebox:
-    
-    def __init__(self, db=None, reset_db=False, ws_port=9000, visible_host=False):
-        if not db:
-            raise NameError("Database not specified")
-
-        if not os.path.isfile(db):
-            # create db
-            reset_db = True
-        elif reset_db:
-            os.remove(db)
-
-        if reset_db:
-            self.create_db(db)
-
-        self.db_name = db
-        self.ws_port = ws_port
-        self.mpv = mpv.MPV(None, no_video='')
-        self.lock = threading.Lock()
-        self.mpv_user_change = False
-        self.mpv_shutdown = False
-        self.currently_playing = None
-        self.mpv_vol = 100.0
-        self.visible_host = visible_host
-
-    def mpv_end_file(self):
-        if not self.mpv_user_change:
-            # get next plid
-            conn = sqlite.connect(self.db_name)
-            cursor = conn.execute(
-                "SELECT next FROM playlist WHERE plid=?", (self.currently_playing,))
-            res = cursor.fetchone()
-            conn.close()
-            if res is not None:
-                new_plid = res[0]
-                self._play(new_plid)
-                msg_broadcast(self.currently_playing, "current")
-        with self.lock:
-            self.mpv_user_change = False
-
-    def create_db(self, db_name):
-        conn = sqlite.connect(db_name)
-        conn.execute(PLAYLIST_SCHEMA)
-        conn.commit()
-        conn.close()
-
-    def start_server(self):
-        # start mpv listeners
-        self.mpv.register_event_callback(mpv.MpvEventID.END_FILE, self.mpv_end_file)
-
-        # set mpv to paused
-        self.mpv.pause = True
-
-        # set web worker db access
-        JukeboxWebWorker.pl_db = self.db_name
-        # set web worker actions
-        JukeboxWebWorker.jukebox_actions = {
-            "play": self.play,
-            "playpause": self.playpause,
-            "volup": self.volup,
-            "voldn": self.voldn,
-            "getvol": lambda: self.mpv_vol,
-            "getcurrent": lambda: self.currently_playing,
-            "ispaused": lambda: self.mpv.pause.val
-        }
-        config = {
-            '/rq': {
-                'tools.websocket.on': True,
-                'tools.websocket.handler_cls': JukeboxWebWorker
-            }
-        }
-        cherrypy.config.update({'server.socket_port': self.ws_port})
-        if self.visible_host:
-            cherrypy.config.update({'server.socket_host': '0.0.0.0'})
-        WebSocketPlugin(cherrypy.engine).subscribe()
-        cherrypy.tools.websocket = WebSocketTool()
-
-        cherrypy.engine.subscribe('stop', self.stop_server)
-
-        cherrypy.quickstart(JukeboxWebService(), '/', config=config)
-
-    def stop_server(self):
-        # why isn't this working after Ctrl-C
-        self.mpv_shutdown = True
-        self.mpv.quit()
-
-    def play(self, plid):
-        ret = self._play(plid, user=True)
-        if self.mpv.pause.val:
-            self.mpv.pause = False
-        return ret
-
-    def _play(self, plid, user=False):
-        with self.lock:
-            self.mpv_user_change = self.currently_playing is not None and user
-
-        uri = self.get_uri_from_id(plid)
-        info = get_youtube_info(uri)
-        if info is None:
-            return False
-
-        with self.lock:
-            self.currently_playing = plid
-
-        self.mpv.play(info["url"])
-        self.set_vol()
-
-        return True
-
-    def set_vol(self):
-        # busy-wait until we can set the mpv vol
-        vol_set_flag = False
-        start_time = time.time()
-        # 5 seconds until we terminate
-        while not vol_set_flag and (time.time()-start_time < 5):
-            try:
-                self.mpv.volume = self.mpv_vol
-                vol_set_flag = True
-            except:
-                pass
-
-    def playpause(self):
-        if self.mpv.pause.val:
-            self.mpv.pause = False
-        else:
-            self.mpv.pause = True
-        return True
-
-    def volup(self):
-        self.mpv_vol = min(self.mpv_vol + 5.0, 100.0)
-        if self.mpv.filename != '-1':
-            self.set_vol()
-
-    def voldn(self):
-        self.mpv_vol = max(0.0, self.mpv_vol - 5.0)
-        if self.mpv.filename != '-1':
-            self.set_vol()
-    
-    def get_uri_from_id(self, plid):
-        conn = sqlite.connect(self.db_name)
-        cursor = conn.execute(
-            "SELECT uri FROM playlist WHERE plid=?", (plid,))
-        res = cursor.fetchone()
-        conn.close()
-        if res is None:
-            return None
-        return res[0]
+def broadcast(payload, label):
+    msg = {
+        "label": label,
+        "type": "broadcast",
+        "payload": payload
+    }
+    cherrypy.engine.publish("websocket-broadcast", json.dumps(msg))
 
 class JukeboxWebService:
-    def __init__(self):
-        pass
-
-    @cherrypy.expose
-    def index(self):
-        return "hello world"
-
-    # this is the websocket endpoint
     @cherrypy.expose
     def rq(self):
         handler = cherrypy.request.ws_handler
 
+class Jukebox:
+    @classmethod
+    def start_server(cls):
+        if os.path.isfile(PLAYLIST_FILE):
+            f = open(PLAYLIST_FILE, "r")
+            try:
+                cls.playlist = json.loads(f.read())
+            except:
+                pass
+            finally:
+                f.close()
+        else:
+            cls.playlist = []
+        
+        cls.currently_playing = None
+        cls.user_selected_flag = False
+        cls.shutdown_flag = False
+        cls.lock = threading.Lock()
+        cls.mpv = mpv.MPV(None, no_video='')
+        cls.volume = 100.0
+
+        # threaded debug
+        #cls.debug = threading.Thread(target=pdb.set_trace)
+        #cls.debug.start()
+
+        # start mpv listeners
+        # 
+
+        # set mpv to paused initially
+        cls.mpv.pause = True
+
+        cherrypy_config = {
+            "/rq": {
+                "tools.websocket.on": True,
+                "tools.websocket.handler_cls": JukeboxWebWorker
+            }
+        }
+        cherrypy.config.update({"server.socket_port": WS_PORT})
+        if VISIBILITY:
+            cherrypy.config.update({"server.socket_host": "0.0.0.0"})
+
+        WebSocketPlugin(cherrypy.engine).subscribe()
+        cherrypy.tools.websocket = WebSocketTool()
+
+        cherrypy.engine.subscribe("stop", cls.stop_server)
+
+        cherrypy.quickstart(JukeboxWebService(), "/", config=cherrypy_config)
+
+    @classmethod
+    def stop_server(cls):
+        cls.shutdown_flag = True
+        cls.mpv.quit()
+
+    @classmethod
+    def _save_playlist(cls):
+        f = open(PLAYLIST_FILE, "w")
+        f.write(json.dumps(cls.playlist))
+        f.close()
+
+    @classmethod
+    def _set_current(cls, current):
+        with cls.lock:
+            cls.currently_playing = current
+        broadcast(cls.currently_playing, "current")
+
+    @classmethod
+    def add_handler(cls, uri):
+        info = get_youtube_info(uri)
+        if info is None:
+            return False
+
+        # temporarily ingore playlists
+        if "entries" in info:
+            return False
+
+        with cls.lock:
+            # I think list append is protected by CPython's GIL
+            cls.playlist.append({
+                "title": info["title"],
+                "url": info["webpage_url"]
+            })
+        cls._save_playlist()
+        return True
+
+    @classmethod
+    def remove_handler(cls, sid):
+        if sid >= len(cls.playlist):
+            return False
+
+        del cls.playlist[sid]
+        cls._save_playlist()
+
+        # stop if already playing
+        if sid == cls.currently_playing:
+            # play nothing and pause
+            cls._set_paused(True)
+            cls.mpv.play("")
+            cls._set_current(None)
+
+        return True
+
+    @classmethod
+    def play_handler(cls, sid):
+        with cls.lock:
+            cls.user_selected_flag = True
+        return cls._play(sid)
+
+    @classmethod
+    def _play(cls, sid):
+        # unpause
+        if cls.mpv.pause.val is True:
+            cls._set_paused(False)
+        
+        if sid >= len(cls.playlist):
+            return False
+
+        info = get_youtube_info(cls.playlist[sid]["url"])
+        if info is None:
+            return False
+
+        # set currently playing
+        cls._set_current(sid)
+
+        # NOTE: This blocks all other requests?
+        cls.mpv.play(info["url"])
+        cls._set_volume()
+
+        return True
+
+    @classmethod
+    def playpause_handler(cls):
+        cls._set_paused(not cls.mpv.pause.val)
+        return True
+
+    @classmethod
+    def _set_paused(cls, state):
+        cls.mpv.pause = state
+        broadcast(cls.mpv.pause.val, "paused")
+
+    @classmethod
+    def change_volume(cls, delta):
+        new_vol = cls.volume + delta
+        if new_vol > 100.0 or new_vol < 0.0:
+            return False
+        cls.volume = new_vol
+        cls._set_volume()
+        return True
+
+    @classmethod
+    def moveup_handler(cls, sid):
+        if sid > len(cls.playlist):
+            return False
+        # if sid is the first song, we can't move it up
+        if sid > 0:
+            cls.playlist[sid-1], cls.playlist[sid] = cls.playlist[sid], cls.playlist[sid-1]
+            # if moving up currently_playing, we need to fix that
+            if sid == cls.currently_playing:
+                cls._set_current(sid-1)
+
+        cls._save_playlist()
+            
+        return True
+
+
+    # this is needed to correctly set mpv volume
+    @classmethod
+    def _set_volume(cls):
+        # don't set the volume if nothing is playing b/c
+        # setting volume will not work
+        if cls.currently_playing is None:
+            return
+
+        vol_set_flag = False
+        start_time = time.time()
+        # 5 seconds until termination
+        while not vol_set_flag and (time.time() - start_time < 5):
+            try:
+                cls.mpv.volume = cls.volume
+                vol_set_flag = True
+            except:
+                pass
+
 class JukeboxWebWorker(WebSocket):
-    # set by jukebox
-    pl_db = None
-    jukebox_actions = None
-
-    def __init__(self, *args, **kwargs):
-        super(JukeboxWebWorker, self).__init__(*args, **kwargs)
-        #self.ydl = YoutubeDL({'restrictfilenames': True})
-        #self.ydl.add_default_info_extractors()
-
-    def msg_fail(self):
-        self.send(json.dumps({'status':False,'rqid':self.rqid}))
-    
-    def msg_success(self, data={}):
-        data.update({'status':True,'rqid':self.rqid})
-        self.send(json.dumps(data))
-
     def received_message(self, message):
-        self.rqid = None
-
         if message.is_binary:
-            self.msg_fail()
             return
 
         try:
             msg = json.loads(str(message))
         except:
-            self.msg_fail()
             return
 
         # make sure the given type is a mapping, i.e. dict
         if not isinstance(msg, dict):
-            self.msg_fail()
             return
 
-        if 'cmd' not in msg or 'rqid' not in msg:
-            self.msg_fail()
+        if "cmd" not in msg or "rqid" not in msg:
             return
 
-        self.rqid = msg["rqid"]
+        debug(msg)
 
-        cmd = msg["cmd"]
-        if cmd == "add" and "uri" in msg:
-            self.add_uri(msg["uri"])
-
-        elif cmd == "playlist":
-            pl = self.get_pl()
-            self.msg_success(pl)
-
-        elif cmd == "ispaused":
-            ispaused = self.jukebox_actions["ispaused"]()
-            self.msg_success({"ispaused":ispaused})
-
-        elif cmd == "volume":
-            vol = self.get_vol()
-            self.msg_success(vol)
-
-        elif cmd == "current":
-            cur = self.get_current()
-            self.msg_success(cur)
-
-        elif cmd == "move_up" and "id" in msg:
-            self.move_up(msg["id"])
-
-        elif cmd == "play" and "id" in msg:
-            # unpaused from play()
-            if self.jukebox_actions["ispaused"]():
-                msg_broadcast({}, "playpause")
-            if self.jukebox_actions["play"](msg["id"]):
-                self.msg_success()
-                msg_broadcast(self.get_current(), "current")
-            else:
-                self.msg_fail()
-
-        elif cmd == "playpause":
-            if self.jukebox_actions["playpause"]():
-                self.msg_success()
-                msg_broadcast({}, "playpause")
-            else:
-                self.msg_fail()
-
-        elif cmd == "remove" and "id" in msg:
-            # remove id from playlist, stop if playing
-            self.remove(msg["id"])
-
-        elif cmd == "volup":
-            self.jukebox_actions["volup"]()
-            msg_broadcast({'value': self.jukebox_actions["getvol"]()}, "volume")
-            self.msg_success()
-
-        elif cmd == "voldn":
-            self.jukebox_actions["voldn"]()
-            msg_broadcast({'value': self.jukebox_actions["getvol"]()}, "volume")
-            self.msg_success()
-
-        else:
-            self.msg_fail()
-
-    def add_uri(self,uri):
-        info = get_youtube_info(uri)
-        if info is None:
-            self.msg_fail()
+        # parse the incoming message
+        cmd = msg["cmd"] + "_handler"
+        if cmd not in dir(self):
             return
 
-        # deal with playlists
-        if 'entries' in info:
+        # call the action handle
+        thread = threading.Thread(target=self.run, args=(cmd, msg))
+        thread.start()
+
+    def run(self, cmd, msg):
+        getattr(self, cmd)(msg)
+
+    def fail(self, rqid):
+        # it is possible for the client to terminate before
+        # the server sends the response
+        if not self.client_terminated:
+            self.send(json.dumps({
+                "rqid": rqid,
+                "status": False,
+                "type": "unicast"
+            }))
+
+    def success(self, rqid, payload=None):
+        # it is possible for the client to terminate before
+        # the server sends the response
+        if not self.client_terminated:
+            self.send(json.dumps({
+                "rqid": rqid,
+                "status": True,
+                "type": "unicast",
+                "payload": payload
+            }))
+
+    # Add song to playlist
+    # {'cmd': 'add', 'uri': URI}
+    def add_handler(self, msg):
+        if "uri" in msg:
+            if Jukebox.add_handler(msg["uri"]) is True:
+                self.success(msg["rqid"])
+                broadcast(Jukebox.playlist, "playlist")
+                return
+        self.fail(msg["rqid"])
+
+    # remove song from playlist
+    # {'cmd': 'remove', 'id': ID}
+    def remove_handler(self, msg):
+        if "id" in msg:
+            if Jukebox.remove_handler(msg["id"]) is True:
+                self.success(msg["rqid"])
+                # TODO: possibly replace this with a general "state" update
+                broadcast(Jukebox.playlist, "playlist")
+                return
+        self.fail(msg["rqid"])
+
+    # play the given id
+    # {'cmd': 'play', 'id': ID}
+    def play_handler(self, msg):
+        if "id" in msg:
+            if Jukebox.play_handler(msg["id"]) is True:
+                self.success(msg["rqid"])
+                return
+        self.fail(msg["rqid"])
+
+    # sets the play/pause state
+    # {'cmd': 'playpause'}
+    def playpause_handler(self, msg):
+        if Jukebox.playpause_handler() is True:
+            self.success(msg["rqid"])
             return
+        self.fail(msg["rqid"])
 
-        try:
-            # exclusive db connection
-            conn = sqlite.connect(self.pl_db, isolation_level="EXCLUSIVE")
+    # increases volume
+    # {'cmd': 'volup'}
+    def volup_handler(self, msg):
+        if Jukebox.change_volume(+5) is True:
+            self.success(msg["rqid"])
+            broadcast(Jukebox.volume, "volume")
+            return
+        self.fail(msg["rqid"]) 
 
-            # insert selection
-            plrow = (info['title'], info['webpage_url'], 0)
-            conn.execute("INSERT INTO playlist VALUES (null,?,?,?,null)", plrow)
+    # decreases volume
+    # {'cmd': 'voldn'}
+    def voldn_handler(self, msg):
+        if Jukebox.change_volume(-5) is True:
+            self.success(msg["rqid"])
+            broadcast(Jukebox.volume, "volume")
+            return
+        self.fail(msg["rqid"]) 
 
-            # update last element of linked list
-            cursor = conn.execute(
-                """UPDATE playlist SET next=last_insert_rowid()
-                    WHERE next IS NULL
-                    AND plid IS NOT last_insert_rowid()""")
+    # move song up
+    # {'cmd': 'moveup'}
+    def moveup_handler(self, msg):
+        if "id" in msg:
+            if Jukebox.moveup_handler(msg["id"]) is True:
+                self.success(msg["rqid"])
+                broadcast(Jukebox.playlist, "playlist")
+                return
+        self.fail(msg["rqid"])
 
-            conn.commit()
-            conn.close()
-        except:
-            self.msg_fail()
-        else:
-            msg_broadcast(self.get_pl(), "playlist")
-            self.msg_success()
+    # getters
+    def get_playlist_handler(self, msg):
+        self.success(msg["rqid"], payload=Jukebox.playlist)
 
-    def remove(self, plid):
-        try:
-            conn = sqlite.connect(self.pl_db, isolation_level="EXCLUSIVE")
+    def get_volume_handler(self, msg):
+        self.success(msg["rqid"], payload=Jukebox.volume)
 
-            prev_cursor = conn.execute(
-                "SELECT plid FROM playlist WHERE next=?", (plid,))
-            prev_cursor_res = prev_cursor.fetchone()
-            if prev_cursor_res is not None:
-                prev_plid = prev_cursor_res[0]
-                conn.execute(
-                    """UPDATE playlist SET next=(
-                        SELECT next from playlist WHERE plid=?)
-                        WHERE plid=?""", (plid, prev_plid))
-                conn.execute(
-                    """DELETE FROM playlist WHERE plid=?""", (plid,))
-                conn.commit()
-            conn.close()
-        except:
-            self.msg_fail()
-        else:
-            pl = self.get_pl()
-            msg_broadcast(pl, "playlist")
-            self.msg_success()
- 
-    def move_up(self, plid):
-        try:
-            conn = sqlite.connect(self.pl_db, isolation_level="EXCLUSIVE")
-            
-            prev_cursor = conn.execute(
-                "SELECT plid FROM playlist WHERE next=?", (plid,))
-            prev_cursor_res = prev_cursor.fetchone()
-            if prev_cursor_res is not None:
-                prev_plid = prev_cursor_res[0]
-                conn.execute(
-                    """UPDATE playlist SET next=(
-                        SELECT next FROM playlist WHERE plid=?)
-                        WHERE plid=?""", (plid, prev_plid))
-                conn.execute(
-                    """UPDATE playlist SET next=?
-                        WHERE plid=(
-                        SELECT plid WHERE next=?)""", (plid, prev_plid))
-                conn.execute(
-                    """UPDATE playlist SET next=?
-                        WHERE plid=?""", (prev_plid, plid))
-                conn.commit()
-            conn.close()
-        except:
-            self.msg_fail()
-        else:
-            pl = self.get_pl()
-            msg_broadcast(pl, "playlist")
-            self.msg_success()
+    def get_current_handler(self, msg):
+        self.success(msg["rqid"], payload=Jukebox.currently_playing)
 
-    def get_pl(self):
-        conn = sqlite.connect(self.pl_db)
-        pl = []
-        for row in conn.execute("SELECT * FROM playlist"):
-            pl.append(
-                {
-                    'id': row[0],
-                    'title': row[1],
-                    'uri': row[2],
-                    'votes': row[3],
-                    'next': row[4]
-                }
-            )
-        conn.close()
+    def get_paused_handler(self, msg):
+        self.success(msg["rqid"], payload=Jukebox.mpv.pause.val)
 
-        msg = {
-            'playlist': pl
-        }
-        return msg
-
-    def get_vol(self):
-        vol = {
-            'volume': self.jukebox_actions["getvol"]()
-        }
-        return vol
-
-    def get_current(self):
-        cur = {
-            'current': self.jukebox_actions["getcurrent"]()
-        }
-        return cur
+if __name__ == "__main__":
+    if len(sys.argv) == 2 and sys.argv[1] == "--visible":
+        VISIBILITY = True
+    Jukebox.start_server()
