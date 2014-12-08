@@ -93,7 +93,8 @@ body {
 	margin: 0 auto;
 	list-style-position: inside;
 	text-align: left;
-	overflow: auto
+	overflow: auto;
+	min-height: 100px;
 }
 
 .playlist-container ol#playlist > li {

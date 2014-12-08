@@ -174,6 +174,7 @@ function guiUpdatePlaylist(playlist) {
         link.textContent = elm.title;
         link.target = "_blank";
         li.appendChild(link);
+        li.alt = link.textContent;
 
         list.push(li);
     });
