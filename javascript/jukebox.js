@@ -144,11 +144,10 @@ function guiUpdatePosition(pos) {
  * This function toggles the play pause button. It is called by the websocket's onmessage function.
  */
 function guiTogglePlayPause(state) {
-	var disabled = currently_playing == null;
     if (state) {
-        $("#playpause").html("Play").prop("disabled", disabled);
+        $("#playpause").html("Play");
     } else {
-        $("#playpause").html("Pause").prop("disabled", disabled);
+        $("#playpause").html("Pause");
     }
 }
 
@@ -211,16 +210,33 @@ function guiUpdateVolume(vol) {
 
 /**
  * Update the currently playing GUI. Called by the websocket's onmessage function.
+ * This also update everything that depends on currently playing.
+ *
  * @param current The currently playing song.
  */
 var currently_playing = null;
 function guiUpdateCurrentlyPlaying(current) {
 	currently_playing = current;
-    if (current == null) return;
-    $(".playlist_elm > button.play").prop('disabled', false).text("play");
-    var id = "#play" + current;
-    $(id).text("playing");
-    $(id).prop("disabled", true);
+    if (current == null) {
+		guiUpdatePosition(null);
+
+		$("#playpause").prop("disabled", true);
+
+		$("#rewindbtn").prop("disabled", true);
+		$("#fastforwardbtn").prop("disabled", true);
+	}
+	else {
+		$(".playlist_elm > button.play").prop('disabled', false).text("play");
+
+		var id = "#play" + current;
+		$(id).text("playing");
+		$(id).prop("disabled", true);
+
+		$("#playpause").prop("disabled", false);
+
+		$("#rewindbtn").prop("disabled", false);
+		$("#fastforwardbtn").prop("disabled", false);
+	}
 }
 
 // websocket interface
@@ -257,22 +273,6 @@ $(document).ready(function () {
                         break;
                     case "current":
                         guiUpdateCurrentlyPlaying(payload);
-						// TODO: Possibly remove this coupling
-						// if currently_playing is null, then server
-						// isn't broadcasting position anymore, so
-						// disabled position.
-						// Also set paused state to true.
-						if (currently_playing == null) {
-							guiTogglePlayPause(true);
-							guiUpdatePosition(null);
-							$("#rewindbtn").prop("disabled", true);
-							$("#fastforwardbtn").prop("disabled", true);
-						}
-						else {
-							guiTogglePlayPause(false);
-							$("#rewindbtn").prop("disabled", false);
-							$("#fastforwardbtn").prop("disabled", false);
-						}
                         break;
 					case "position":
 						guiUpdatePosition(payload);
