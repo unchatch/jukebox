@@ -225,6 +225,8 @@ class Jukebox:
             # if moving up currently_playing, we need to fix that
             if sid == cls.currently_playing:
                 cls._set_current(sid-1)
+            elif sid-1 == cls.currently_playing:
+                cls._set_current(sid)
 
         cls._save_playlist()
             
