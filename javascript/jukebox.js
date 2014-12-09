@@ -193,7 +193,7 @@ function guiUpdatePlaylist(playlist) {
         var link = document.createElement("a");
         link.href = elm.url;
         // wheeee no sanitization here
-        link.textContent = " " + elm.title;
+        link.textContent = elm.title;
         link.target = "_blank";
         li.appendChild(link);
         li.title = elm.title;
