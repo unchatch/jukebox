@@ -9,6 +9,22 @@ body {
 
 }
 
+button:hover,
+input[type=submit]:hover {
+	background-color: rgba(0, 0, 0, 0.4) !important;
+	color: #bbb;
+}
+
+button[disabled=disabled], /* CSS 2 */
+button:disabled, /* CSS 3 */
+button:disabled:hover,
+input[type=submit]:active,
+button:active {
+	/* !important to override button:hover below */
+	background-color: rgba(50, 50, 50, 1) !important;
+	color: #bbb !important;
+}
+
 .page-content {
 	margin: 20px;
 	padding: 10px;
@@ -36,10 +52,6 @@ body {
 	background-color: rgba(0, 0, 0, 0.05);
 	font-family: u2000;
 	font: 12px Arial,Helvetica,sans-serif;
-}
-
-.controls-container > table button:hover {
-	background-color: rgba(0, 0, 0, 0.1);
 }
 
 .controls-container .input {
@@ -71,10 +83,6 @@ body {
 
 .controls-container .input input:-ms-input-placeholder {
 	color: rgb(66, 66, 66);
-}
-
-.controls-container .input input:hover {
-	background-color: rgba(0, 0, 0, 0.1);
 }
 
 .left {
@@ -111,6 +119,7 @@ body {
 	border: 1px solid black;
 	background-color: rgba(0, 0, 0, 0.05);
 	margin: 1px;
+	padding: 2px;
 }
 
 .playlist-container ol#playlist > li > button:first-of-type {
@@ -121,10 +130,10 @@ body {
 .playlist-container ol#playlist > li > button:last-of-type {
 	border-bottom-right-radius: 5px;
 	border-top-right-radius: 5px;
+	margin-right: 5px;
 }
 
 .playlist-container ol#playlist > li > button:hover {
-	background-color: rgba(0, 0, 0, 0.1);
 }
 
 @media (max-width : 800px) {

@@ -146,8 +146,14 @@ function guiUpdatePosition(pos) {
 function guiTogglePlayPause(state) {
     if (state) {
         $("#playpause").html("Play");
+		if (currently_playing != null) {
+			$("#play" + currently_playing).text("paused");
+		}
     } else {
         $("#playpause").html("Pause");
+		if (currently_playing != null) {
+			$("#play" + currently_playing).text("playing");
+		}
     }
 }
 
