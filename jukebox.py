@@ -331,22 +331,30 @@ class JukeboxWebWorker(WebSocket):
         # it is possible for the client to terminate before
         # the server sends the response
         if not self.client_terminated:
-            self.send(json.dumps({
-                "rqid": rqid,
-                "status": False,
-                "type": "unicast"
-            }))
+            try:
+                self.send(json.dumps({
+                    "rqid": rqid,
+                    "status": False,
+                    "type": "unicast"
+                }))
+            except:
+                # terminate connection
+                self.close(1011)
 
     def success(self, rqid, payload=None):
         # it is possible for the client to terminate before
         # the server sends the response
         if not self.client_terminated:
-            self.send(json.dumps({
-                "rqid": rqid,
-                "status": True,
-                "type": "unicast",
-                "payload": payload
-            }))
+            try:
+                self.send(json.dumps({
+                    "rqid": rqid,
+                    "status": True,
+                    "type": "unicast",
+                    "payload": payload
+                }))
+            except:
+                # terminate connection
+                self.close(1011)
 
     # Add song to playlist
     # {'cmd': 'add', 'uri': URI}
