@@ -173,14 +173,15 @@ class Jukebox:
         cls._save_playlist()
 
         # stop if already playing
-        if sid == cls.currently_playing:
-            # play nothing and pause
-            cls._set_paused(True)
-            cls.mpv.play("")
-            cls._set_current(None)
-        # take care of adjusting currently_playing
-        elif sid < cls.currently_playing:
-            cls._set_current(cls.currently_playing-1)
+        if cls.currently_playing is not None:
+            if sid == cls.currently_playing:
+                # play nothing and pause
+                cls._set_paused(True)
+                cls.mpv.play("")
+                cls._set_current(None)
+            # take care of adjusting currently_playing
+            elif sid < cls.currently_playing:
+                cls._set_current(cls.currently_playing-1)
 
         return True
 
@@ -260,11 +261,12 @@ class Jukebox:
         # if sid is the first song, we can't move it up
         if sid > 0:
             cls.playlist[sid-1], cls.playlist[sid] = cls.playlist[sid], cls.playlist[sid-1]
-            # if moving up currently_playing, we need to fix that
-            if sid == cls.currently_playing:
-                cls._set_current(sid-1)
-            elif sid-1 == cls.currently_playing:
-                cls._set_current(sid)
+            if cls.currently_playing is not None:
+                # if moving up currently_playing, we need to fix that
+                if sid == cls.currently_playing:
+                    cls._set_current(sid-1)
+                elif sid-1 == cls.currently_playing:
+                    cls._set_current(sid)
 
         cls._save_playlist()
             
