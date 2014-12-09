@@ -122,7 +122,8 @@ class Jukebox:
     @classmethod
     def _broadcast_position(cls):
         while not cls.shutdown_flag:
-            if cls.currently_playing is not None and not cls.mpv.pause.val:
+            if cls.currently_playing is not None and not cls.mpv.pause.val \
+                    and cls.mpv.percent_pos != -1.0:
                 broadcast(cls.mpv.percent_pos, "position")
             # wait 1 sec before update
             time.sleep(1)
