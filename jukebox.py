@@ -79,7 +79,7 @@ class Jukebox:
         #cls.debug.start()
 
         # start mpv listeners
-        # 
+        cls.mpv.register_event_callback(mpv.MpvEventID.END_FILE, cls._mpv_eof)
 
         # set mpv to paused initially
         cls.mpv.pause = True
@@ -100,6 +100,14 @@ class Jukebox:
         cherrypy.engine.subscribe("stop", cls.stop_server)
 
         cherrypy.quickstart(JukeboxWebService(), "/", config=cherrypy_config)
+
+    @classmethod
+    def _mpv_eof(cls):
+        print(cls.user_selected_flag)
+        if not cls.user_selected_flag:
+            print("PLAYING...")
+            cls._play(cls.currently_playing + 1)
+            print("...done")
 
     @classmethod
     def stop_server(cls):
@@ -179,6 +187,12 @@ class Jukebox:
         # NOTE: This blocks all other requests?
         cls.mpv.play(info["url"])
         cls._set_volume()
+
+        # unset user selected flag
+        # has to be after mpv.play b/c _mpv_eof will be called
+        #  after mpv.play
+        with cls.lock:
+            cls.user_selected_flag = False
 
         return True
 
