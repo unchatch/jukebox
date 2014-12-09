@@ -172,6 +172,8 @@ class Jukebox:
             cls._set_paused(True)
             cls.mpv.play("")
             cls._set_current(None)
+        elif sid < cls.currently_playing:
+            cls._set_current(cls.currently_playing-1)
 
         return True
 
