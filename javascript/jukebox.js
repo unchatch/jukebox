@@ -133,7 +133,7 @@ function volDown() {
  */
 function guiUpdatePosition(pos) {
 	if (pos == null) {
-		$("#position").text("");
+		$("#position").text("--");
 	}
 	else {
 		$("#position").text(Math.round10(pos, -1) + "%");
@@ -334,6 +334,10 @@ $(document).ready(function () {
 			guiTogglePlayPause(e["payload"])
         }, function (e) {
         });
+		sendMsg({"cmd": "get_position"}, function (e) {
+			guiUpdatePosition(e["payload"]);
+		}, function (e) {
+		});
     };
 
     $("#addVideo").on("click", function () {

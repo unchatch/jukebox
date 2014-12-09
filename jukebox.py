@@ -435,6 +435,12 @@ class JukeboxWebWorker(WebSocket):
     def get_paused_handler(self, msg):
         self.success(msg["rqid"], payload=Jukebox.mpv.pause.val)
 
+    def get_position_handler(self, msg):
+        if Jukebox.mpv.percent_pos == -1.0:
+            self.success(msg["rqid"], payload=None)
+        else:
+            self.success(msg["rqid"], payload=Jukebox.mpv.percent_pos)
+
 if __name__ == "__main__":
     if "--visible" in sys.argv:
         VISIBILITY = True
