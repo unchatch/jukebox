@@ -148,6 +148,7 @@ function guiUpdatePlaylist(playlist) {
     $playlist.empty();
     var list = [];
     playlist.forEach(function (elm, idx, arr) {
+		console.log(elm);
         var li = document.createElement("li");
         li.className = "playlist_elm";
         li.id = idx + "_li";
@@ -172,12 +173,12 @@ function guiUpdatePlaylist(playlist) {
         li.appendChild(moveUpButton);
 
         var link = document.createElement("a");
-        link.href = elm.uri;
+        link.href = elm.url;
         // wheeee no sanitization here
         link.textContent = elm.title;
         link.target = "_blank";
         li.appendChild(link);
-        li.alt = link.textContent;
+        li.title = elm.title;
 
         list.push(li);
     });
