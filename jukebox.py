@@ -75,8 +75,12 @@ class Jukebox:
         cls.volume = 100.0
 
         # threaded debug
-        #cls.debug = threading.Thread(target=pdb.set_trace)
-        #cls.debug.start()
+        #cls._thread_debug = threading.Thread(target=cls._debug)
+        #cls._thread_debug.start()
+
+        # threaded broadcast of position
+        cls._thread_broadcast_pos = threading.Thread(target=cls._broadcast_position)
+        cls._thread_broadcast_pos.start()
 
         # start mpv listeners
         cls.mpv.register_event_callback(mpv.MpvEventID.END_FILE, cls._mpv_eof)
@@ -102,12 +106,21 @@ class Jukebox:
         cherrypy.quickstart(JukeboxWebService(), "/", config=cherrypy_config)
 
     @classmethod
+    def _debug(cls):
+        pdb.set_trace()
+
+    @classmethod
     def _mpv_eof(cls):
-        print(cls.user_selected_flag)
-        if not cls.user_selected_flag:
-            print("PLAYING...")
+        if not cls.user_selected_flag and cls.currently_playing is not None:
             cls._play(cls.currently_playing + 1)
-            print("...done")
+
+    @classmethod
+    def _broadcast_position(cls):
+        while not cls.shutdown_flag:
+            if cls.currently_playing is not None and not cls.mpv.pause.val:
+                broadcast(cls.mpv.percent_pos, "position")
+            # wait 1 sec before update
+            time.sleep(1)
 
     @classmethod
     def stop_server(cls):
@@ -164,6 +177,8 @@ class Jukebox:
 
     @classmethod
     def play_handler(cls, sid):
+        if sid is None:
+            return False
         with cls.lock:
             cls.user_selected_flag = True
         return cls._play(sid)

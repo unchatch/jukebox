@@ -127,6 +127,19 @@ function volDown() {
 }
 
 ////// GUI update functions
+
+/**
+ * This function updates current position, in percentage.
+ */
+function guiUpdatePosition(pos) {
+	if (pos == null) {
+		$("#position").text("");
+	}
+	else {
+		$("#position").text(Math.round10(pos, -1) + "%");
+	}
+}
+
 /**
  * This function toggles the play pause button. It is called by the websocket's onmessage function.
  */
@@ -241,11 +254,25 @@ $(document).ready(function () {
                         break;
                     case "paused":
                         guiTogglePlayPause(payload);
-                        guiUpdateCurrentlyPlaying(currently_playing);
                         break;
                     case "current":
                         guiUpdateCurrentlyPlaying(payload);
+						// TODO: Possibly remove this coupling
+						// if currently_playing is null, then server
+						// isn't broadcasting position anymore, so
+						// disabled position.
+						// Also set paused state to true.
+						if (currently_playing == null) {
+							guiTogglePlayPause(true);
+							guiUpdatePosition(null);
+						}
+						else {
+							guiTogglePlayPause(false);
+						}
                         break;
+					case "position":
+						guiUpdatePosition(payload);
+						break;
                     default:
                         console.log("BAD BROADCAST: ", resp);
                 }
