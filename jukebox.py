@@ -247,11 +247,18 @@ class Jukebox:
 
         new_pos = cls.mpv.time_pos + delta
         if new_pos > cls.mpv.length:
-            return False
+            new_pos = cls.mpv.length
         if new_pos < 0.0:
             # reset to beginning
             new_pos = 0.0
-        cls.mpv.time_pos = new_pos
+
+        # setting position when mpv is buffering can make
+        # mpv complain
+        try:
+            cls.mpv.time_pos = new_pos
+        except:
+            pass
+
         return True
 
     @classmethod
