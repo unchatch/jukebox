@@ -119,7 +119,6 @@ class Jukebox:
     def _broadcast_position(cls):
         while not cls.shutdown_flag:
             if cls.currently_playing is not None and not cls.mpv.pause.val:
-                print(cls.mpv.percent_pos)
                 broadcast(cls.mpv.percent_pos, "position")
             # wait 1 sec before update
             time.sleep(1)
@@ -405,7 +404,6 @@ class JukeboxWebWorker(WebSocket):
     def rewind_handler(self, msg):
         if Jukebox.change_position(-10) is True:
             self.success(msg["rqid"])
-            broadcast(Jukebox.mpv.time_pos, "position")
             return
         self.fail(msg["rqid"])
 
