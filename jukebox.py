@@ -99,7 +99,8 @@ class Jukebox:
         if VISIBILITY:
             cherrypy.config.update({"server.socket_host": "0.0.0.0"})
 
-        WebSocketPlugin(cherrypy.engine).subscribe()
+        cls._wsp = WebSocketPlugin(cherrypy.engine)
+        cls._wsp.subscribe()
         cherrypy.tools.websocket = WebSocketTool()
 
         cherrypy.engine.subscribe("stop", cls.stop_server)
