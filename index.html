@@ -30,15 +30,14 @@
             </tr>
             <tr>
                 <td>
-                    <button disabled="true" onclick="rewind()">◀</button>
+                    <button onclick="rewind()">◀</button>
                 </td>
                 <td>
                     <button id="playpause" onclick="playPause()">Play</button>
                 </td>
                 <td>
-                    <button disabled="true" onclick="fastforward()">▶</button>
+                    <button onclick="fastforward()">▶</button>
                 </td>
-            </tr>
             </tr>
             <tr>
                 <td></td>
@@ -51,12 +50,10 @@
         </table>
         <div>Volume: <span id="volume"></span></div>
         <div>Position: <span id="position"></span></div>
-				<span>
-					<div class="input">
-                        <input type="text" id="videoUrl" placeholder="YouTube url">
-                        <input type="submit" id="addVideo" value="Add">
-                    </div>
-				</span>
+        <div class="input">
+            <input type="text" id="videoUrl" placeholder="YouTube url">
+            <input type="submit" id="addVideo" value="Add">
+        </div>
     </div>
     <div class="playlist-container">
         <h2>Playlist</h2>
