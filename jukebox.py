@@ -16,7 +16,7 @@ from youtube_dl import YoutubeDL
 #mpv.load_lua()
 
 # debug flag
-DEBUG = True
+DEBUG = False
 
 # Where the playlist file is located
 PLAYLIST_FILE = "playlist.json"
@@ -75,8 +75,9 @@ class Jukebox:
         cls.volume = 100.0
 
         # threaded debug
-        #cls._thread_debug = threading.Thread(target=cls._debug)
-        #cls._thread_debug.start()
+        if DEBUG:
+            cls._thread_debug = threading.Thread(target=cls._debug)
+            cls._thread_debug.start()
 
         # threaded broadcast of position
         cls._thread_broadcast_pos = threading.Thread(target=cls._broadcast_position)
@@ -118,6 +119,7 @@ class Jukebox:
     def _broadcast_position(cls):
         while not cls.shutdown_flag:
             if cls.currently_playing is not None and not cls.mpv.pause.val:
+                print(cls.mpv.percent_pos)
                 broadcast(cls.mpv.percent_pos, "position")
             # wait 1 sec before update
             time.sleep(1)
@@ -172,6 +174,7 @@ class Jukebox:
             cls._set_paused(True)
             cls.mpv.play("")
             cls._set_current(None)
+        # take care of adjusting currently_playing
         elif sid < cls.currently_playing:
             cls._set_current(cls.currently_playing-1)
 
@@ -233,6 +236,20 @@ class Jukebox:
         return True
 
     @classmethod
+    def change_position(cls, delta):
+        if cls.currently_playing is None:
+            return False
+
+        new_pos = cls.mpv.time_pos + delta
+        if new_pos > cls.mpv.length:
+            return False
+        if new_pos < 0.0:
+            # reset to beginning
+            new_pos = 0.0
+        cls.mpv.time_pos = new_pos
+        return True
+
+    @classmethod
     def moveup_handler(cls, sid):
         if sid > len(cls.playlist):
             return False
@@ -248,7 +265,6 @@ class Jukebox:
         cls._save_playlist()
             
         return True
-
 
     # this is needed to correctly set mpv volume
     @classmethod
@@ -284,8 +300,6 @@ class JukeboxWebWorker(WebSocket):
 
         if "cmd" not in msg or "rqid" not in msg:
             return
-
-        debug(msg)
 
         # parse the incoming message
         cmd = msg["cmd"] + "_handler"
@@ -386,6 +400,23 @@ class JukeboxWebWorker(WebSocket):
                 return
         self.fail(msg["rqid"])
 
+    # rewind 10 sec
+    # {'cmd': 'rewind'}
+    def rewind_handler(self, msg):
+        if Jukebox.change_position(-10) is True:
+            self.success(msg["rqid"])
+            broadcast(Jukebox.mpv.time_pos, "position")
+            return
+        self.fail(msg["rqid"])
+
+    # forward 10 sec
+    # {'cmd': 'fastforward'}
+    def fastforward_handler(self, msg):
+        if Jukebox.change_position(+10) is True:
+            self.success(msg["rqid"])
+            return
+        self.fail(msg["rqid"])
+
     # getters
     def get_playlist_handler(self, msg):
         self.success(msg["rqid"], payload=Jukebox.playlist)
@@ -400,6 +431,8 @@ class JukeboxWebWorker(WebSocket):
         self.success(msg["rqid"], payload=Jukebox.mpv.pause.val)
 
 if __name__ == "__main__":
-    if len(sys.argv) == 2 and sys.argv[1] == "--visible":
+    if "--visible" in sys.argv:
         VISIBILITY = True
+    if "--debug" in sys.argv:
+        DEBUG = True
     Jukebox.start_server()

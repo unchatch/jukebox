@@ -265,9 +265,13 @@ $(document).ready(function () {
 						if (currently_playing == null) {
 							guiTogglePlayPause(true);
 							guiUpdatePosition(null);
+							$("#rewindbtn").prop("disabled", true);
+							$("#fastforwardbtn").prop("disabled", true);
 						}
 						else {
 							guiTogglePlayPause(false);
+							$("#rewindbtn").prop("disabled", false);
+							$("#fastforwardbtn").prop("disabled", false);
 						}
                         break;
 					case "position":
