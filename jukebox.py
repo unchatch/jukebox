@@ -299,7 +299,23 @@ class Jukebox:
                 pass
 
 class JukeboxWebWorker(WebSocket):
+    # flood control
+    flood_count = 0
+    flood_last_time = 0
+
     def received_message(self, message):
+        # flood control
+        if self.flood_count >= 30:
+            # close this socket!
+            if self.sock is not None:
+                self.close_connection()
+            return
+        self.flood_count += 1
+        # clear flood count every 5 seconds
+        if time.time() - self.flood_last_time > 5:
+            self.flood_count = 0
+            self.flood_last_time = time.time()
+
         if message.is_binary:
             return
 
@@ -315,7 +331,8 @@ class JukeboxWebWorker(WebSocket):
         if "cmd" not in msg or "rqid" not in msg:
             return
 
-        # parse the incoming message
+        # parse the incoming message in a new thread,
+        # so each actual request is a new thread
         cmd = msg["cmd"] + "_handler"
         if cmd not in dir(self):
             return
@@ -338,8 +355,8 @@ class JukeboxWebWorker(WebSocket):
                     "type": "unicast"
                 }))
             except:
-                # terminate connection
-                self.close(1011)
+                if self.sock is not None:
+                    self.close_connection()
 
     def success(self, rqid, payload=None):
         # it is possible for the client to terminate before
@@ -353,8 +370,8 @@ class JukeboxWebWorker(WebSocket):
                     "payload": payload
                 }))
             except:
-                # terminate connection
-                self.close(1011)
+                if self.sock is not None:
+                    self.close_connection()
 
     # Add song to playlist
     # {'cmd': 'add', 'uri': URI}
