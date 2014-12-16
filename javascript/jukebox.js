@@ -222,6 +222,7 @@ function guiUpdateVolume(vol) {
  */
 var currently_playing = null;
 function guiUpdateCurrentlyPlaying(current) {
+	$(".playlist_elm > button.play").prop('disabled', false).text("play");
 	currently_playing = current;
     if (current == null) {
 		guiUpdatePosition(null);
@@ -232,8 +233,6 @@ function guiUpdateCurrentlyPlaying(current) {
 		$("#fastforwardbtn").prop("disabled", true);
 	}
 	else {
-		$(".playlist_elm > button.play").prop('disabled', false).text("play");
-
 		var id = "#play" + current;
 		$(id).text("playing");
 		$(id).prop("disabled", true);

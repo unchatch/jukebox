@@ -114,7 +114,7 @@ class Jukebox:
     @classmethod
     def _mpv_eof(cls):
         if not cls.user_selected_flag and cls.currently_playing is not None:
-            if cls.currently_playing == len(cls.playlist):
+            if cls.currently_playing == len(cls.playlist)-1:
                 # stop at end of playlist. We can also implement repeat here
                 cls._set_current(None)
             else:
