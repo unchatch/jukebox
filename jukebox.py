@@ -71,8 +71,10 @@ class Jukebox:
         cls.user_selected_flag = False
         cls.shutdown_flag = False
         cls.lock = threading.Lock()
+        cls.play_lock = threading.Lock()
         cls.mpv = mpv.MPV(None, no_video='')
         cls.volume = 100.0
+        cls.play_queue = queue.Queue(maxsize=50)
 
         # threaded debug
         if DEBUG:
@@ -82,6 +84,10 @@ class Jukebox:
         # threaded broadcast of position
         cls._thread_broadcast_pos = threading.Thread(target=cls._broadcast_position)
         cls._thread_broadcast_pos.start()
+
+        # threaded play
+        cls._thread_play = threading.Thread(target=cls._play)
+        cls._thread_play.start()
 
         # start mpv listeners
         cls.mpv.register_event_callback(mpv.MpvEventID.END_FILE, cls._mpv_eof)
@@ -118,7 +124,8 @@ class Jukebox:
                 # stop at end of playlist. We can also implement repeat here
                 cls._set_current(None)
             else:
-                cls._play(cls.currently_playing + 1)
+                with cls.lock:
+                    cls.play_queue.put(cls.currently_playing + 1, block=True)
 
     @classmethod
     def _broadcast_position(cls):
@@ -130,8 +137,40 @@ class Jukebox:
             time.sleep(1)
 
     @classmethod
+    def _play(cls):
+        while True:
+            next_id = cls.play_queue.get(block=True)
+
+            if cls.shutdown_flag is True:
+                return
+
+            if next_id >= len(cls.playlist):
+                continue
+
+            info = get_youtube_info(cls.playlist[next_id]["url"])
+            if info is None:
+                continue
+
+            # set currently playing
+            with cls.lock:
+                # have to do this manually
+                cls.currently_playing = next_id
+                broadcast(cls.currently_playing, "current")
+
+                # NOTE: This blocks all other requests?
+                cls.mpv.play(info["url"])
+                # unpause
+                if cls.mpv.pause.val is True:
+                    cls._set_paused(False)
+            cls._set_volume()
+
+            cls.user_selected_flag = not cls.play_queue.empty()
+
+    @classmethod
     def stop_server(cls):
         cls.shutdown_flag = True
+        # have to activate the queue to shutdown play thread
+        cls.play_queue.put(None)
         cls.mpv.quit()
 
     @classmethod
@@ -192,34 +231,7 @@ class Jukebox:
             return False
         with cls.lock:
             cls.user_selected_flag = True
-        return cls._play(sid)
-
-    @classmethod
-    def _play(cls, sid):
-        # unpause
-        if cls.mpv.pause.val is True:
-            cls._set_paused(False)
-        
-        if sid >= len(cls.playlist):
-            return False
-
-        info = get_youtube_info(cls.playlist[sid]["url"])
-        if info is None:
-            return False
-
-        # set currently playing
-        cls._set_current(sid)
-
-        # NOTE: This blocks all other requests?
-        cls.mpv.play(info["url"])
-        cls._set_volume()
-
-        # unset user selected flag
-        # has to be after mpv.play b/c _mpv_eof will be called
-        #  after mpv.play
-        with cls.lock:
-            cls.user_selected_flag = False
-
+        cls.play_queue.put(sid, block=True)
         return True
 
     @classmethod
