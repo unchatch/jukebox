@@ -27,6 +27,12 @@ WS_PORT = 9000
 # host visibility
 VISIBILITY = False
 
+def secureheaders():
+    headers = cherrypy.response.headers
+    headers['X-Frame-Options'] = 'DENY'
+    headers['X-XSS-Protection'] = '1; mode=block'
+    headers['Content-Security-Policy'] = "default-src='self'"
+
 def debug(msg):
     if DEBUG:
         print(">> DEBUG: ", msg)
@@ -98,12 +104,17 @@ class Jukebox:
         cherrypy_config = {
             "/rq": {
                 "tools.websocket.on": True,
-                "tools.websocket.handler_cls": JukeboxWebWorker
+                "tools.websocket.handler_cls": JukeboxWebWorker,
+                "tools.secureheaders.on": True
             }
         }
         cherrypy.config.update({"server.socket_port": WS_PORT})
         if VISIBILITY:
             cherrypy.config.update({"server.socket_host": "0.0.0.0"})
+
+        # set the priority according to your needs if you are hooking something
+        # else on the 'before_finalize' hook point.
+        cherrypy.tools.secureheaders = cherrypy.Tool('before_finalize', secureheaders, priority=60)
 
         cls._wsp = WebSocketPlugin(cherrypy.engine)
         cls._wsp.subscribe()
