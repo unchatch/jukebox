@@ -35,7 +35,7 @@ def secureheaders():
 
 def debug(msg):
     if DEBUG:
-        print(">> DEBUG: ", msg)
+        cherrypy.log(">> DEBUG: ", msg)
 
 def get_youtube_info(url):
     ydl = YoutubeDL()
@@ -105,9 +105,14 @@ class Jukebox:
             "/rq": {
                 "tools.websocket.on": True,
                 "tools.websocket.handler_cls": JukeboxWebWorker,
-                "tools.secureheaders.on": True
+                "tools.secureheaders.on": True,
             }
         }
+        cherrypy.config.update({
+            "log.access_file": "access_log",
+            "log.error_file": "error_log"
+        })
+
         cherrypy.config.update({"server.socket_port": WS_PORT})
         if VISIBILITY:
             cherrypy.config.update({"server.socket_host": "0.0.0.0"})
@@ -401,6 +406,8 @@ class JukeboxWebWorker(WebSocket):
     def add_handler(self, msg):
         if "uri" in msg:
             if Jukebox.add_handler(msg["uri"]) is True:
+                cherrypy.log("{0} add()".format( \
+                    self.peer_address[0]))
                 self.success(msg["rqid"])
                 broadcast(Jukebox.playlist, "playlist")
                 return
@@ -411,6 +418,8 @@ class JukeboxWebWorker(WebSocket):
     def remove_handler(self, msg):
         if "id" in msg:
             if Jukebox.remove_handler(msg["id"]) is True:
+                cherrypy.log("{0} remove()".format( \
+                    self.peer_address[0]))
                 self.success(msg["rqid"])
                 # TODO: possibly replace this with a general "state" update
                 broadcast(Jukebox.playlist, "playlist")
@@ -422,6 +431,8 @@ class JukeboxWebWorker(WebSocket):
     def play_handler(self, msg):
         if "id" in msg:
             if Jukebox.play_handler(msg["id"]) is True:
+                cherrypy.log("{0} play()".format( \
+                    self.peer_address[0]))
                 self.success(msg["rqid"])
                 return
         self.fail(msg["rqid"])
