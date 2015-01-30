@@ -24,9 +24,6 @@ PLAYLIST_FILE = "playlist.json"
 # WS Port
 WS_PORT = 9000
 
-# host visibility
-VISIBILITY = False
-
 def secureheaders():
     headers = cherrypy.response.headers
     headers['X-Frame-Options'] = 'DENY'
@@ -61,7 +58,7 @@ class JukeboxWebService:
 
 class Jukebox:
     @classmethod
-    def start_server(cls):
+    def start_server(cls, visibility=False, ao="alsa:device=[plughw:1,0]"):
         if os.path.isfile(PLAYLIST_FILE):
             f = open(PLAYLIST_FILE, "r")
             try:
@@ -78,7 +75,7 @@ class Jukebox:
         cls.shutdown_flag = False
         cls.lock = threading.Lock()
         cls.play_lock = threading.Lock()
-        cls.mpv = mpv.MPV(None, no_video='')
+        cls.mpv = mpv.MPV(None, no_video="", ao=ao)
         cls.volume = 100.0
         cls.play_queue = queue.Queue(maxsize=50)
 
@@ -114,7 +111,7 @@ class Jukebox:
         })
 
         cherrypy.config.update({"server.socket_port": WS_PORT})
-        if VISIBILITY:
+        if visibility:
             cherrypy.config.update({"server.socket_host": "0.0.0.0"})
 
         # set the priority according to your needs if you are hooking something
@@ -509,8 +506,6 @@ class JukeboxWebWorker(WebSocket):
             self.success(msg["rqid"], payload=Jukebox.mpv.percent_pos)
 
 if __name__ == "__main__":
-    if "--visible" in sys.argv:
-        VISIBILITY = True
-    if "--debug" in sys.argv:
-        DEBUG = True
-    Jukebox.start_server()
+    visibility = "--visible" in sys.argv
+    DEBUG = "--debug" in sys.argv
+    Jukebox.start_server(visibility)
