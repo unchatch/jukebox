@@ -209,7 +209,7 @@ class Jukebox:
             for entry in info["entries"]:
                 parsed_pl.append({
                     "title": entry["title"],
-                    "url": info["webpage_url"]
+                    "url": entry["webpage_url"]
                 })
 
             with cls.lock:
