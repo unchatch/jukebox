@@ -204,16 +204,23 @@ class Jukebox:
         if info is None:
             return False
 
-        # temporarily ingore playlists
         if "entries" in info:
-            return False
+            parsed_pl = []
+            for entry in info["entries"]:
+                parsed_pl.append({
+                    "title": entry["title"],
+                    "url": info["webpage_url"]
+                })
 
-        with cls.lock:
-            # I think list append is protected by CPython's GIL
-            cls.playlist.append({
-                "title": info["title"],
-                "url": info["webpage_url"]
-            })
+            with cls.lock:
+                cls.playlist += parsed_pl
+        else:
+            with cls.lock:
+                # I think list append is protected by CPython's GIL
+                cls.playlist.append({
+                    "title": info["title"],
+                    "url": info["webpage_url"]
+                })
         cls._save_playlist()
         return True
 
