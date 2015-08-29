@@ -7,7 +7,6 @@ import cherrypy
 import mpv
 import time
 import queue
-import urllib.parse
 from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool, WebSocket
 from ws4py.client import WebSocketBaseClient
 from youtube_dl import YoutubeDL
@@ -50,7 +49,7 @@ def broadcast(payload, label):
         "type": "broadcast",
         "payload": payload
     }
-    cherrypy.engine.publish("websocket-broadcast", urllib.parse.quote(bytes(json.dumps(msg), 'utf-8')))
+    cherrypy.engine.publish("websocket-broadcast", bytes(json.dumps(msg), 'utf-8'))
 
 class JukeboxWebService:
     @cherrypy.expose
@@ -382,11 +381,11 @@ class JukeboxWebWorker(WebSocket):
         # the server sends the response
         if not self.client_terminated:
             try:
-                self.send(urllib.parse.quote(bytes(json.dumps({
+                self.send(bytes(json.dumps({
                     "rqid": rqid,
                     "status": False,
                     "type": "unicast"
-                }), 'utf-8')))
+                }), 'utf-8'))
             except:
                 if self.sock is not None:
                     self.close_connection()
@@ -396,12 +395,12 @@ class JukeboxWebWorker(WebSocket):
         # the server sends the response
         if not self.client_terminated:
             try:
-                self.send(urllib.parse.quote(bytes(json.dumps({
+                self.send(bytes(json.dumps({
                     "rqid": rqid,
                     "status": True,
                     "type": "unicast",
                     "payload": payload
-                }), 'utf-8')))
+                }), 'utf-8'))
             except:
                 if self.sock is not None:
                     self.close_connection()
