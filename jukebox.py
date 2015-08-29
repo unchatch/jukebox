@@ -7,6 +7,7 @@ import cherrypy
 import mpv
 import time
 import queue
+import urllib.parse
 from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool, WebSocket
 from ws4py.client import WebSocketBaseClient
 from youtube_dl import YoutubeDL
@@ -49,7 +50,7 @@ def broadcast(payload, label):
         "type": "broadcast",
         "payload": payload
     }
-    cherrypy.engine.publish("websocket-broadcast", json.dumps(msg))
+    cherrypy.engine.publish("websocket-broadcast", urllib.parse.quote(bytes(json.dumps(msg), 'utf-8')))
 
 class JukeboxWebService:
     @cherrypy.expose
@@ -171,7 +172,7 @@ class Jukebox:
                 broadcast(cls.currently_playing, "current")
 
                 # NOTE: This blocks all other requests?
-                cls.mpv.play(info["url"])
+                cls.mpv.play(info["requested_formats"][1]["url"])
                 # unpause
                 if cls.mpv.pause.val is True:
                     cls._set_paused(False)
@@ -381,11 +382,11 @@ class JukeboxWebWorker(WebSocket):
         # the server sends the response
         if not self.client_terminated:
             try:
-                self.send(json.dumps({
+                self.send(urllib.parse.quote(bytes(json.dumps({
                     "rqid": rqid,
                     "status": False,
                     "type": "unicast"
-                }))
+                }), 'utf-8')))
             except:
                 if self.sock is not None:
                     self.close_connection()
@@ -395,12 +396,12 @@ class JukeboxWebWorker(WebSocket):
         # the server sends the response
         if not self.client_terminated:
             try:
-                self.send(json.dumps({
+                self.send(urllib.parse.quote(bytes(json.dumps({
                     "rqid": rqid,
                     "status": True,
                     "type": "unicast",
                     "payload": payload
-                }))
+                }), 'utf-8')))
             except:
                 if self.sock is not None:
                     self.close_connection()
